@@ -17,7 +17,7 @@ import math
 from typing import Any, Dict, List, Optional
 
 from schemas.models import EvidenceItem, VesselCase
-from sentinel.copernicus_client import CopernicusClient
+from sentinel.open_meteo_client import OpenMeteoClient
 from sentinel.gfw_client import GFWClient
 from sentinel.protected_area_client import ProtectedAreaClient
 from sentinel.risk_score import RiskScorer
@@ -63,7 +63,7 @@ class SentinelService:
         self._gfw = GFWClient()
         self._pa = ProtectedAreaClient()
         self._scorer = RiskScorer()
-        self._copernicus = CopernicusClient()
+        self._copernicus = OpenMeteoClient()
         self._cases: Dict[str, VesselCase] = {}
         self._loaded = False
 
