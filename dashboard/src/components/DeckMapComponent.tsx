@@ -9,12 +9,9 @@ import type { Coordinate, DashboardState, VesselGeometry, SARScene } from "@/lib
 import { fetchBathymetry, fetchChlorophyll, fetchSARScenes, fetchSST } from "@/lib/api";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+// 100% Free & Open Dark Vector Map Style (CartoCDN — no API key, credit card, or payment required)
+const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-// Free dark style — no token needed
-const MAP_STYLE = MAPBOX_TOKEN
-  ? "mapbox://styles/mapbox/dark-v11"
-  : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 export const CAMERA_PRESETS = {
   OVERVIEW: { longitude: -90.5, latitude: -0.5, zoom: 7.2, pitch: 45, bearing: -15 },
@@ -610,7 +607,7 @@ export default function DeckMapComponent({
         getTooltip={getTooltip as any}
         getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
       >
-        <Map mapboxAccessToken={MAPBOX_TOKEN || undefined} mapStyle={MAP_STYLE} attributionControl={false}>
+        <Map mapStyle={MAP_STYLE} attributionControl={false}>
           <NavigationControl position="top-right" />
         </Map>
       </DeckGL>

@@ -136,9 +136,7 @@ GFW_API_TOKEN=your_gfw_token_here
 CDSE_CLIENT_ID=your_cdse_client_id
 CDSE_CLIENT_SECRET=your_cdse_client_secret
 
-# 3D Mapping & Basemaps (Optional - defaults to high-res dark satellite basemap)
-NEXT_PUBLIC_MAPBOX_TOKEN=
-NEXT_PUBLIC_CESIUM_ION_TOKEN=
+# 3D Mapping & Basemaps (Defaults to free & open CartoCDN Dark Matter vector basemap — no token required)
 ```
 
 ---
