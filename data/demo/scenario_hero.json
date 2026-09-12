@@ -14,7 +14,7 @@
     "destination": [-91.5, -1.8],
     "vessel_speed_kn": 14.0,
     "fuel_rate_proxy": 1.0,
-    "objective_weights": {"w_fuel": 0.35, "w_time": 0.25, "w_weather": 0.1, "w_security": 0.3},
+    "objective_weights": {"w_fuel": 0.2, "w_time": 0.2, "w_weather": 0.1, "w_security": 0.5},
     "environment_seed_path": "data/demo/navigator_environment.json",
     "risk_zone_vessel_case_id": "vessel_hero_01"
   },

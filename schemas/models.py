@@ -25,6 +25,15 @@ from pydantic import BaseModel, Field, field_validator
 #  Member 1: SENTINEL models
 # ---------------------------------------------------------------------------
 
+class TimelineEvent(BaseModel):
+    """Compact structured timeline event."""
+    timestamp: str
+    event_type: str
+    geometry: Optional[Dict[str, Any]] = None
+    source: str
+    description: str
+
+
 class EvidenceItem(BaseModel):
     """One line of the explainable risk breakdown."""
     feature: str = Field(
@@ -68,6 +77,8 @@ class VesselCase(BaseModel):
     )
     evidence: List[EvidenceItem]
     confidence: float = Field(..., ge=0.0, le=1.0)
+    timeline: List[TimelineEvent] = Field(default_factory=list)
+    provenance: Optional[Dict[str, Any]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -142,11 +153,23 @@ class RouteResult(BaseModel):
         default=None,
         description="Overall data-quality disclosure (good/partial/missing)",
     )
+    route_id: Optional[str] = None
+    route_version: Optional[str] = None
+    changed_at: Optional[str] = None
+    trigger: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
 #  Member 3: CLEANER models
 # ---------------------------------------------------------------------------
+
+class ReplayEvent(BaseModel):
+    """Structured replay event for debris/USV actions."""
+    timestamp: str
+    event_type: str
+    details: Dict[str, Any]
+    description: str
+
 
 class DebrisCluster(BaseModel):
     """A geospatial cluster of marine debris."""
@@ -202,6 +225,7 @@ class CleanupPlan(BaseModel):
     rejected_assignments: List[Dict[str, Any]] = Field(default_factory=list)
     feasibility_summary: Dict[str, Any] = Field(default_factory=dict)
     provenance: Dict[str, Any] = Field(default_factory=dict)
+    replay_events: List[ReplayEvent] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

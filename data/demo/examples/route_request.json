@@ -4,10 +4,10 @@
   "vessel_speed_kn": 14.0,
   "fuel_rate_proxy": 1.0,
   "objective_weights": {
-    "w_fuel": 0.35,
-    "w_time": 0.25,
+    "w_fuel": 0.2,
+    "w_time": 0.2,
     "w_weather": 0.10,
-    "w_security": 0.30
+    "w_security": 0.50
   },
   "risk_zones": [
     {

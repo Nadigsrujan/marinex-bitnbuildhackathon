@@ -65,6 +65,14 @@ class NavigatorService:
 
         Returns a RouteResult with both polylines and comparison metrics.
         """
+        import uuid
+        from datetime import datetime, timezone
+        
+        route_id = str(uuid.uuid4())
+        route_version = "1.0"
+        changed_at = datetime.now(timezone.utc).isoformat()
+        trigger = "Risk zone updated" if request.risk_zones else "Scenario loaded"
+        
         origin_lon, origin_lat = request.origin[0], request.origin[1]
         dest_lon, dest_lat = request.destination[0], request.destination[1]
 
@@ -308,6 +316,10 @@ class NavigatorService:
             cost_decomposition=cost_decomposition,
             reroute_reason=reroute_reason,
             data_quality_status=data_quality_status,
+            route_id=route_id,
+            route_version=route_version,
+            changed_at=changed_at,
+            trigger=trigger,
         )
 
     def supports_request(self, request: RouteRequest) -> bool:

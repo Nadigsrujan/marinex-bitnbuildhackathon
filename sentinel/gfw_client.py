@@ -101,7 +101,7 @@ class GFWClient:
             try:
                 req = urllib.request.Request(url, headers=headers, method="GET")
                 with urllib.request.urlopen(req, timeout=GFW_TIMEOUT_S) as resp:
-                    if resp.status != 200:
+                    if resp.status not in (200, 201, 202):
                         raise ValueError(f"GFW API returned HTTP {resp.status}")
                     data = json.loads(resp.read().decode("utf-8"))
                     entries = data.get("entries", [])
@@ -200,6 +200,13 @@ class GFWClient:
             else:
                 logger.info("GFW cache expired (age %.0fs); refreshing.", age_s)
 
+        # Check disk cache as secondary fallback if memory cache misses
+        disk_cached = self._check_cache(cache_key)
+        if disk_cached:
+            logger.info("GFW disk cache hit for key=%s", cache_key)
+            self._MEM_CACHE[cache_key] = (time.time(), disk_cached)
+            return disk_cached
+
         # Build request URL and body
         # GFW v3 validates pagination on the query string even for POST.
         url = f"{GFW_BASE_URL}/events?limit=100&offset=0"
@@ -245,7 +252,7 @@ class GFWClient:
                     url, data=body, headers=headers, method="POST"
                 )
                 with urllib.request.urlopen(req, timeout=GFW_TIMEOUT_S) as resp:
-                    if resp.status != 200:
+                    if resp.status not in (200, 201, 202):
                         raise ValueError(f"GFW API returned HTTP {resp.status}")
                     raw_bytes = resp.read()
                     response_data = json.loads(raw_bytes.decode("utf-8"))
@@ -256,8 +263,9 @@ class GFWClient:
                     )
                     if not isinstance(entries, list):
                         entries = []
-                    # Store in in-memory TTL cache
+                    # Store in in-memory TTL cache and disk cache
                     self._MEM_CACHE[cache_key] = (time.time(), entries)
+                    self._write_cache(cache_key, entries)
                     logger.info("GFW API live fetch returned %d events.", len(entries))
                     return entries
 

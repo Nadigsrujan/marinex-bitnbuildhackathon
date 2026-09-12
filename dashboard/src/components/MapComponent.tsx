@@ -42,10 +42,12 @@ export default function MapComponent({
   state,
   selectedCase,
   onSelectCase,
+  replayStep = -1,
 }: {
   state: DashboardState;
   selectedCase?: string;
   onSelectCase?: (id: string) => void;
+  replayStep?: number;
 }) {
   const route = state.navigator.route_result,
     plan = state.cleaner.cleanup_plan;
@@ -180,7 +182,7 @@ export default function MapComponent({
           name="AIS gaps / event markers (when supplied)"
         >
           <LayerGroup>
-            {state.sentinel.cases.map((v) => (
+            {(replayStep === -1 || replayStep >= 1) && state.sentinel.cases.map((v) => (
               <LayerGroup key={v.vessel_id}>
                 {v.gap_geometry && (
                   <Polyline
@@ -212,7 +214,7 @@ export default function MapComponent({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Baseline route · derived">
           <LayerGroup>
-            {route && (
+            {route && (replayStep === -1 || replayStep >= 3) && (
               <Polyline
                 positions={route.baseline_polyline.map(ll)}
                 pathOptions={{ color: "#cbd5e1", weight: 3, dashArray: "6 9" }}
@@ -227,7 +229,7 @@ export default function MapComponent({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Optimized route · derived">
           <LayerGroup>
-            {route && (
+            {route && (replayStep === -1 || replayStep >= 3) && (
               <Polyline
                 positions={route.optimized_polyline.map(ll)}
                 pathOptions={{ color: "#38bdf8", weight: 4 }}
@@ -244,7 +246,7 @@ export default function MapComponent({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Marine currents · forecast">
           <LayerGroup>
-            {samples.map((s, i) => {
+            {(replayStep === -1 || replayStep >= 4) && samples.map((s, i) => {
               const angle = ((s.current_direction_deg ?? 0) * Math.PI) / 180;
               // Glyph length is deliberately fixed for readability, not a trajectory.
               const dx = Math.sin(angle) * 0.07,
@@ -336,7 +338,7 @@ export default function MapComponent({
           name="Debris clusters · simulated inputs"
         >
           <LayerGroup>
-            {state.cleaner.clusters.map((c) => (
+            {(replayStep === -1 || replayStep >= 4) && state.cleaner.clusters.map((c) => (
               <CircleMarker
                 key={c.cluster_id}
                 center={ll(c.centroid)}
@@ -428,7 +430,7 @@ export default function MapComponent({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Mission / intercept · derived">
           <LayerGroup>
-            {plan?.route_sequences.map((r, i) => (
+            {(replayStep === -1 || replayStep >= 5) && plan?.route_sequences.map((r, i) => (
               <Polyline
                 key={i}
                 positions={r.map(ll)}
@@ -456,6 +458,34 @@ export default function MapComponent({
           </LayerGroup>
         </LayersControl.Overlay>
       </LayersControl>
+      {/* ---- Map Legend ---- */}
+      <div style={{
+        position: 'absolute',
+        bottom: '24px',
+        left: '12px',
+        zIndex: 1000,
+        background: 'rgba(11, 35, 49, 0.92)',
+        border: '1px solid #284653',
+        borderRadius: '6px',
+        padding: '10px 14px',
+        fontSize: '11px',
+        color: '#e2e8f0',
+        lineHeight: '1.8',
+        maxWidth: '220px',
+        backdropFilter: 'blur(4px)',
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: '4px', fontSize: '12px' }}>Map Legend</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#fb7185', marginRight: 6, verticalAlign: 'middle' }} />Vessel risk marker</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#fb7185', marginRight: 6, verticalAlign: 'middle', opacity: 0.5 }} />Risk zone polygon</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#cbd5e1', marginRight: 6, verticalAlign: 'middle', borderBottom: '2px dashed #cbd5e1' }} />Baseline route</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#38bdf8', marginRight: 6, verticalAlign: 'middle' }} />Optimised route</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#67e8f9', marginRight: 6, verticalAlign: 'middle' }} />Ocean current vector</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#fbbf24', marginRight: 6, verticalAlign: 'middle' }} />Debris cluster</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#fbbf24', marginRight: 6, verticalAlign: 'middle', borderBottom: '2px dashed #fbbf24' }} />Predicted drift trail</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#34d399', marginRight: 6, verticalAlign: 'middle' }} />USV (simulated)</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 3, background: '#34d399', marginRight: 6, verticalAlign: 'middle' }} />USV intercept mission</div>
+        <div><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', border: '2px solid #818cf8', marginRight: 6, verticalAlign: 'middle', background: 'transparent' }} />Protected area</div>
+      </div>
     </MapContainer>
   );
 }

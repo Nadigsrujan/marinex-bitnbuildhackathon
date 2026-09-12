@@ -74,9 +74,14 @@ class SentinelService:
 
     def _ensure_loaded(self) -> None:
         """Lazy-load cases on first access."""
+        from core.config import HERO_BBOX
         if self._loaded:
             return
-        raw_events = self._gfw.fetch_events()
+        raw_events = self._gfw.fetch_events(bbox=HERO_BBOX)
+        # Limit live events to max 5 to prevent Copernicus from timing out Next.js
+        if len(raw_events) > 5:
+            raw_events = raw_events[:5]
+            
         for raw in raw_events:
             case = self._process_event(raw)
             self._cases[case.vessel_id] = case
@@ -95,9 +100,19 @@ class SentinelService:
             return VesselCase(**raw)
 
         # -- Extract raw signals --
-        vessel_id = raw.get("vessel_id", "unknown")
-        lon = raw.get("lon", 0.0)
-        lat = raw.get("lat", 0.0)
+        # Handle both demo structure and live GFW API structure
+        vessel_id = raw.get("vessel_id", raw.get("id", "unknown"))
+        
+        if "position" in raw:
+            lon = raw["position"].get("lon", 0.0)
+            lat = raw["position"].get("lat", 0.0)
+        elif "regions" in raw and isinstance(raw["regions"], dict):
+            # Sometimes events have regions instead of explicit positions
+            lon = raw.get("lon", 0.0)
+            lat = raw.get("lat", 0.0)
+        else:
+            lon = raw.get("lon", 0.0)
+            lat = raw.get("lat", 0.0)
         gap_hours = raw.get("gap_hours", 0.0)
         fishing_signal = raw.get("fishing_signal", False)
         loitering_signal = raw.get("loitering_signal", False)
@@ -134,6 +149,38 @@ class SentinelService:
         else:
             geometry = {"type": "Point", "coordinates": [lon, lat]}
 
+        from schemas.models import TimelineEvent
+        from core.config import USE_DEMO_DATA
+        
+        timeline = []
+        if gap_hours > 0:
+            timeline.append(TimelineEvent(
+                timestamp=raw.get("gap_start", event_time),
+                event_type="ais_gap_start",
+                source="Global Fishing Watch",
+                description=f"AIS transmission lost for {gap_hours:.1f} hours."
+            ))
+        if fishing_signal:
+            timeline.append(TimelineEvent(
+                timestamp=event_time,
+                event_type="fishing_activity",
+                source="Global Fishing Watch",
+                description="Suspicious fishing pattern detected."
+            ))
+        timeline.append(TimelineEvent(
+            timestamp=event_time,
+            event_type="risk_assessment",
+            source="SENTINEL AI",
+            description=f"Risk level computed as {risk_level} ({risk_score:.1f})."
+        ))
+
+        provenance = {
+            "source_name": "GFW Events API v3" if not USE_DEMO_DATA else "SENTINEL Demo Seed",
+            "cached": True,
+            "data_quality": "High" if not USE_DEMO_DATA else "Simulated",
+            "notes": "AIS gaps and supporting signals indicate potential risk, but are not proof of unlawful conduct."
+        }
+
         return VesselCase(
             vessel_id=vessel_id,
             name=raw.get("name", "Unknown Vessel"),
@@ -151,6 +198,8 @@ class SentinelService:
             risk_level=risk_level,
             evidence=evidence,
             confidence=confidence,
+            timeline=timeline,
+            provenance=provenance,
         )
 
     # ------------------------------------------------------------------
@@ -168,6 +217,13 @@ class SentinelService:
         """Return a single case by ID, or None."""
         self._ensure_loaded()
         return self._cases.get(vessel_id)
+        
+    def analyze_case(self, vessel_id: str) -> Optional[VesselCase]:
+        """
+        Public alias for M4 Supervisor flow. Returns the canonical VesselCase
+        plus renderable risk geometry and evidence without requiring HTTP internally.
+        """
+        return self.get_case(vessel_id)
 
     def get_risk_zones(self) -> List[Dict[str, Any]]:
         """

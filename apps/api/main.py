@@ -60,9 +60,11 @@ def _register_routers() -> None:
         pass  # CLEANER not yet implemented — skip
 
     try:
-        from supervisor.router import router as supervisor_router
-        app.include_router(supervisor_router, prefix="/api", tags=["supervisor"])
-    except ImportError:
+        from apps.api.routers.supervisor import router as supervisor_router
+        app.include_router(supervisor_router, prefix="/api/supervisor", tags=["supervisor"])
+    except ImportError as e:
+        import traceback
+        traceback.print_exc()
         pass  # SUPERVISOR not yet implemented — skip
 
 

@@ -41,41 +41,41 @@ export default function Dashboard() {
   const [state, setState] = useState<DashboardState>(DEMO_DASHBOARD_STATE);
   const [selected, setSelected] = useState("vessel_hero_01");
   const [tab, setTab] = useState<(typeof tabs)[number]>("Route");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // set to false initially so we don't load immediately
   const [notice, setNotice] = useState<string | null>(null);
   const [health, setHealth] = useState(false);
+  const [replayStep, setReplayStep] = useState<number>(-1);
+
+  // Auto-play the replay steps when replayStep is active
   useEffect(() => {
-    let active = true;
-    fetchDashboardState()
-      .then((result) => {
-        if (!active) return;
-        setState(result.state);
-        setNotice(
-          result.source === "offline-demo"
-            ? "Backend unavailable · showing the bundled, computed Cycle A snapshot."
-            : null,
-        );
-      })
-      .catch((error) => {
-        if (active) setNotice(String(error));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    if (replayStep >= 0 && state.supervisor?.last_decision?.trace) {
+      if (replayStep < state.supervisor.last_decision.trace.length) {
+        const timer = setTimeout(() => {
+          setReplayStep((s) => s + 1);
+        }, 1500); // 1.5 seconds per step
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [replayStep, state.supervisor?.last_decision?.trace]);
+
+  // Remove the initial fetch so the user clicks "Run Supervisor Analysis" to trigger it
+  // and see the replay.
+  useEffect(() => {
+    // We only load demo state initially, which is already set
   }, []);
   async function reload() {
     setLoading(true);
     try {
-      const result = await fetchDashboardState();
+      // Import the full analysis trigger!
+      const { runSupervisorAnalysis } = await import("@/lib/api");
+      const result = await runSupervisorAnalysis();
       setState(result.state);
       setNotice(
         result.source === "offline-demo"
-          ? "Backend unavailable · showing the bundled, computed Cycle A snapshot."
+          ? "Backend unavailable · showing offline demo state."
           : null,
       );
+      setReplayStep(0); // Start replay
     } catch (error) {
       setNotice(String(error));
     } finally {
@@ -143,10 +143,25 @@ export default function Dashboard() {
             onClick={reload}
             disabled={loading}
           >
-            {loading ? "Loading scenario…" : "Load hero scenario ↗"}
+            {loading ? "Running Supervisor..." : "Run Supervisor Analysis ↗"}
           </button>
         </div>
       </header>
+      
+      {state.supervisor?.last_decision && (
+        <section className={styles.replayBar}>
+           <div style={{display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.5rem 2rem', background: 'var(--panel-bg)', borderBottom: '1px solid var(--border)'}}>
+              <strong>Replay Controls</strong>
+              <button onClick={() => setReplayStep(0)}>Restart</button>
+              <button onClick={() => setReplayStep(Math.max(0, replayStep - 1))}>Prev Step</button>
+              <button onClick={() => setReplayStep(replayStep >= state.supervisor.last_decision!.trace.length ? -1 : Math.min(state.supervisor.last_decision!.trace.length, replayStep + 1))}>Next Step</button>
+              <button onClick={() => setReplayStep(state.supervisor.last_decision!.trace.length)}>Skip to End</button>
+              <span style={{marginLeft: 'auto'}}>
+                Step {Math.min(replayStep, state.supervisor.last_decision!.trace.length)} / {state.supervisor.last_decision!.trace.length}
+              </span>
+           </div>
+        </section>
+      )}
       {notice && (
         <div role="status" className={styles.notice}>
           {notice}
@@ -212,8 +227,8 @@ export default function Dashboard() {
                 confidence
               </span>
               <small>
-                {c.provenance?.source_mode?.toUpperCase() ?? "UNVERIFIED"} INPUT
-                · DERIVED SCORE
+                {(c.provenance?.source_name ?? c.provenance?.source_mode ?? "UNVERIFIED").toString().toUpperCase()} INPUT
+                · {c.provenance?.data_quality ?? "DERIVED"} SCORE
               </small>
             </button>
           ))}
@@ -231,6 +246,7 @@ export default function Dashboard() {
               state={state}
               selectedCase={vessel?.vessel_id}
               onSelectCase={setSelected}
+              replayStep={replayStep}
             />
           </div>
           <div className={styles.mapFoot}>
@@ -283,10 +299,11 @@ export default function Dashboard() {
                     <time>{vessel.event_time}</time>Case event
                   </li>
                 )}
-                {vessel.event_timeline?.map((event, i) => (
+                {vessel.timeline?.map((event: any, i: number) => (
                   <li key={i}>
                     <time>{event.timestamp}</time>
-                    {event.type}
+                    <strong>{event.event_type}</strong> — {event.description}
+                    <br/><small>Source: {event.source}</small>
                   </li>
                 ))}
               </ol>
@@ -324,6 +341,16 @@ export default function Dashboard() {
         </nav>
         {tab === "Route" && (
           <div className={styles.routePanel}>
+            {state.supervisor?.last_decision && (
+              <div style={{gridColumn: '1 / -1', background: 'var(--blue-900)', padding: '1rem', borderRadius: '4px', marginBottom: '1rem'}}>
+                <h3>Why this changed</h3>
+                <p><strong>Trigger:</strong> {state.supervisor.last_decision.trigger}</p>
+                <p><strong>Recommendation:</strong> {state.supervisor.last_decision.recommendation}</p>
+                <ul>
+                  {state.supervisor.last_decision.tradeoffs.map((t, i) => <li key={i}>{t}</li>)}
+                </ul>
+              </div>
+            )}
             <div>
               <h2>
                 Baseline → MARINEX <span className={styles.badge}>DERIVED</span>
@@ -518,17 +545,20 @@ export default function Dashboard() {
               <>
                 <p>{state.supervisor.last_decision.recommendation}</p>
                 <ol>
-                  {state.supervisor.last_decision.trace.map((step) => (
-                    <li key={step.step}>
-                      {step.agent} · {step.tool} · {step.duration_ms} ms
+                  {state.supervisor.last_decision.trace.map((step: any, i: number) => (
+                    <li key={i} style={{ opacity: i <= replayStep ? 1 : 0.4 }}>
+                      <strong>{step.step}</strong> · {step.status} · {step.duration_ms} ms
+                      <br/>
+                      <small>Inputs: {step.inputs}</small><br/>
+                      <small>Outputs: {step.outputs}</small><br/>
+                      <small>State Change: {step.state_changes}</small>
                     </li>
                   ))}
                 </ol>
               </>
             ) : (
               <p>
-                Cycle A loads deterministic domain outputs. The coordinated
-                Supervisor event trace and replay are scheduled for Cycle B.
+                Cycle B Supervisor event trace and replay will appear here once the analysis runs.
               </p>
             )}
           </>

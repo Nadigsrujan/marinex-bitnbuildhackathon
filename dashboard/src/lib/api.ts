@@ -75,7 +75,7 @@ async function requestState(
   init?: RequestInit,
 ): Promise<DashboardState> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(60000),
     ...init,
     headers: { Accept: "application/json", ...init?.headers },
   });
@@ -114,11 +114,14 @@ export async function runSupervisorAnalysis(): Promise<StateResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/supervisor/run`, {
       method: "POST",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(120000), // high timeout for full pipeline
     });
     if (!response.ok)
       throw new Error(`MARINEX API returned ${response.status}`);
-    return { state: await requestState("/api/state"), source: "api" };
+    const data = await response.json();
+    if (!isDashboardState(data.state))
+      throw new Error("Invalid dashboard state returned");
+    return { state: data.state, source: "api" };
   } catch (error) {
     return withDemoFallback(error);
   }

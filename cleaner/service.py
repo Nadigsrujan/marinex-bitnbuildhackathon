@@ -107,6 +107,36 @@ class CleanerService:
         if environment is not None or any(not c.predicted_positions for c in clusters):
             clusters = self.predict_clusters(clusters, environment)
         plan = greedy_assign(clusters, usvs)
+        
+        # Add deterministic replay events
+        from datetime import datetime, timezone
+        from schemas.models import ReplayEvent
+        
+        now = datetime.now(timezone.utc).isoformat()
+        events = []
+        events.append(ReplayEvent(
+            timestamp=now,
+            event_type="drift_forecast_updated",
+            details={"clusters_forecasted": len(clusters)},
+            description=f"Predicted drift for {len(clusters)} debris clusters using latest environment data."
+        ))
+        for assignment in plan.assignments:
+            events.append(ReplayEvent(
+                timestamp=now,
+                event_type="intercept_chosen",
+                details={"usv_id": assignment["usv_id"], "cluster_id": assignment["cluster_id"]},
+                description=f"USV {assignment['usv_id']} assigned to intercept cluster {assignment['cluster_id']}."
+            ))
+        if plan.rejected_assignments:
+            events.append(ReplayEvent(
+                timestamp=now,
+                event_type="alternatives_rejected",
+                details={"rejected_count": len(plan.rejected_assignments)},
+                description=f"Rejected {len(plan.rejected_assignments)} assignments due to capacity or range constraints."
+            ))
+            
+        plan.replay_events = events
+
         logger.info(
             "Cleanup optimized: %d assignments, %.1f kg estimated collection",
             len(plan.assignments),
