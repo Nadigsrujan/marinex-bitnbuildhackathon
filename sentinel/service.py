@@ -17,6 +17,7 @@ import math
 from typing import Any, Dict, List, Optional
 
 from schemas.models import EvidenceItem, VesselCase
+from sentinel.copernicus_client import CopernicusClient
 from sentinel.gfw_client import GFWClient
 from sentinel.protected_area_client import ProtectedAreaClient
 from sentinel.risk_score import RiskScorer
@@ -62,7 +63,13 @@ class SentinelService:
         self._gfw = GFWClient()
         self._pa = ProtectedAreaClient()
         self._scorer = RiskScorer()
+        self._copernicus = CopernicusClient()
         self._cases: Dict[str, VesselCase] = {}
+        self._loaded = False
+
+    def invalidate(self) -> None:
+        """Flush in-memory case cache (for test isolation)."""
+        self._cases.clear()
         self._loaded = False
 
     def _ensure_loaded(self) -> None:
@@ -95,6 +102,14 @@ class SentinelService:
         fishing_signal = raw.get("fishing_signal", False)
         loitering_signal = raw.get("loitering_signal", False)
         repeat_count = raw.get("repeat_count", 0)
+        event_time = raw.get("event_time", "2024-01-15T00:00:00Z")
+
+        # -- Ocean environment context (Copernicus; fallback if unavailable) --
+        env = self._copernicus.fetch_environment(lon, lat, event_time)
+        logger.info(
+            "[%s] Env context: SST=%.1f°C, SWH=%.1fm, CHL=%.3f mg/m³ (source: %s).",
+            vessel_id, env.sst_c, env.swh_m, env.chl_mg_m3, env.source_label,
+        )
 
         # -- Spatial classification --
         relation, dist_km, area_name = self._pa.classify_point(lon, lat)
@@ -107,6 +122,10 @@ class SentinelService:
             protected_area_relation=relation,
             protected_area_distance_km=dist_km,
             repeat_count=repeat_count,
+            swh_m=env.swh_m,
+            chl_mg_m3=env.chl_mg_m3,
+            sst_anomaly_c=env.sst_anomaly_c,
+            env_source_label=env.source_label,
         )
 
         # -- Build geometry (risk zone polygon for high-risk vessels) --
@@ -119,7 +138,7 @@ class SentinelService:
             vessel_id=vessel_id,
             name=raw.get("name", "Unknown Vessel"),
             flag=raw.get("flag", "Unknown"),
-            event_time=raw.get("event_time", "2024-01-15T00:00:00Z"),
+            event_time=event_time,
             gap_start=raw.get("gap_start"),
             gap_end=raw.get("gap_end"),
             gap_hours=gap_hours,

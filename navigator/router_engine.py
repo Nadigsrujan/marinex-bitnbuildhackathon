@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from navigator.graph import OceanGraph, NodeId, Coord
 from navigator.environment import OceanEnvironment
+from navigator.environment_adapter import EnvironmentAdapter
 from navigator.cost import compute_edge_cost
 from core.logging import get_logger
 
@@ -142,9 +143,10 @@ def optimized_astar(
     # A* with f(n) = g(n) + h(n)
     g_cost: Dict[NodeId, float] = {start_node: 0.0}
     prev: Dict[NodeId, Optional[NodeId]] = {start_node: None}
-    # Track aggregate breakdown
+    # Track aggregate breakdown (include all possible cost keys)
+    default_bd = {"fuel_cost": 0, "time_cost": 0, "weather_cost": 0, "security_cost": 0, "wave_exposure": 0, "current_effect": 0}
     agg_breakdown: Dict[NodeId, Dict[str, float]] = {
-        start_node: {"fuel_cost": 0, "time_cost": 0, "weather_cost": 0, "security_cost": 0}
+        start_node: dict(default_bd)
     }
     pq: List[Tuple[float, NodeId]] = [
         (_heuristic(graph, start_node, end_node), start_node)
@@ -167,10 +169,25 @@ def optimized_astar(
             if c2 is None:
                 continue
 
-            # Sample ocean currents at midpoint
+            # Sample ocean environment at midpoint
             mid_lon = (c1[0] + c2[0]) / 2
             mid_lat = (c1[1] + c2[1]) / 2
-            u, v = environment.sample(mid_lon, mid_lat)
+
+            # Use adapter full normalized data if available, else legacy tuple
+            if hasattr(environment, "sample_normalized"):
+                norm = environment.sample_normalized(mid_lat, mid_lon)
+                u = float(norm.get("current_u_ms", 0.0))
+                v = float(norm.get("current_v_ms", 0.0))
+                w_h = float(norm.get("wave_height_m", 0.0))
+                w_dir = float(norm.get("wave_direction_deg", 0.0))
+                w_per = float(norm.get("wave_period_s", 0.0))
+                sst = float(norm.get("sst_c", 25.0))
+            else:
+                u, v = environment.sample(mid_lon, mid_lat)
+                w_h = 0.0
+                w_dir = 0.0
+                w_per = 0.0
+                sst = 25.0
 
             edge_cost, breakdown = compute_edge_cost(
                 c1[0], c1[1], c2[0], c2[1],
@@ -178,6 +195,10 @@ def optimized_astar(
                 vessel_speed_kn=vessel_speed_kn,
                 fuel_rate_proxy=fuel_rate_proxy,
                 current_u=u, current_v=v,
+                wave_height_m=w_h,
+                wave_direction_deg=w_dir,
+                wave_period_s=w_per,
+                sst_c=sst,
                 weights=weights,
                 risk_zones=risk_zones,
             )
@@ -187,9 +208,9 @@ def optimized_astar(
                 g_cost[neighbour] = new_g
                 prev[neighbour] = current
                 # Aggregate breakdown
-                parent_bd = agg_breakdown.get(current, {"fuel_cost": 0, "time_cost": 0, "weather_cost": 0, "security_cost": 0})
+                parent_bd = agg_breakdown.get(current, dict(default_bd))
                 agg_breakdown[neighbour] = {
-                    k: parent_bd[k] + breakdown[k] for k in breakdown
+                    k: parent_bd.get(k, 0.0) + breakdown.get(k, 0.0) for k in default_bd
                 }
                 h = _heuristic(graph, neighbour, end_node)
                 heapq.heappush(pq, (new_g + h, neighbour))

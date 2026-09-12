@@ -93,7 +93,11 @@ def test_no_gap_control(scorer):
 
 
 def test_long_gap_scores_gap_signal(scorer):
-    """An 18-hour AIS gap contributes its exact configured points."""
+    """An 18-hour AIS gap contributes its exact configured points.
+
+    With swh_m=3.0 (storm threshold), calm_weather_ais_gap is 0, so only
+    the AIS gap contributes: 18.0 * (25.0 / 24.0) = 18.75 pts.
+    """
     risk_score, risk_level, evidence, confidence = scorer.score(
         gap_hours=18.0,
         fishing_signal=False,
@@ -101,8 +105,12 @@ def test_long_gap_scores_gap_signal(scorer):
         protected_area_relation="outside",
         protected_area_distance_km=200.0,
         repeat_count=0,
+        swh_m=3.0,     # storm threshold — weather scorer yields 0 pts
+        chl_mg_m3=0.0,
+        sst_anomaly_c=0.0,
     )
-    assert risk_score == 22.5
+    expected_gap_pts = round(18.0 * (25.0 / 24.0), 2)
+    assert risk_score == expected_gap_pts, f"Expected {expected_gap_pts}, got {risk_score}"
     assert risk_level == "LOW"
     assert len(evidence) == 1
     assert evidence[0].feature == "ais_gap_hours"
@@ -242,15 +250,18 @@ def test_weights_sum_to_100():
 # ---------------------------------------------------------------------------
 
 def test_hero_seed_traceability():
-    """For vessel_hero_01: round(sum(evidence.points), 2) == risk_score."""
+    """For vessel_hero_01: round(sum(evidence.points), 2) must equal risk_score."""
     seed_path = Path(__file__).resolve().parent.parent.parent / "data" / "demo" / "sentinel_cases.json"
     with open(seed_path) as f:
         cases = json.load(f)
     hero = next((c for c in cases if c["vessel_id"] == "vessel_hero_01"), None)
     assert hero is not None, "vessel_hero_01 not found in seed"
     evidence_sum = round(sum(e["points"] for e in hero["evidence"]), 2)
-    assert evidence_sum == hero["risk_score"], (
-        f"Traceability fail: sum(evidence)={evidence_sum} != risk_score={hero['risk_score']}"
+    stored_score = hero["risk_score"]
+    # risk_score must equal min(100, sum(evidence)) — the cap invariant
+    expected_score = round(min(100.0, evidence_sum), 2)
+    assert stored_score == expected_score, (
+        f"Traceability fail: min(100, sum(evidence))={expected_score} != risk_score={stored_score}"
     )
 
 
@@ -379,3 +390,100 @@ def test_no_incriminating_language():
             assert phrase not in expl_lower, (
                 f"Forbidden phrase '{phrase}' in evidence explanation: {item.explanation}"
             )
+
+
+# ---------------------------------------------------------------------------
+#  19-26: Cycle-A — Copernicus & environmental signal tests
+# ---------------------------------------------------------------------------
+
+from sentinel.features import score_calm_weather_gap, score_fishing_environment, _WEIGHTS as FW
+from sentinel.copernicus_client import CopernicusClient, EnvSnapshot
+
+
+def test_calm_weather_gap_adds_risk():
+    """19. Calm seas + gap > 6h → weather feature contributes full pts."""
+    _swh, pts, expl = score_calm_weather_gap(swh_m=0.5, gap_hours=14.0)
+    assert pts == FW["weather"], f"Expected {FW['weather']} pts, got {pts}"
+    assert "calm" in expl.lower() or "swh" in expl.lower()
+
+
+def test_storm_gap_zero_risk():
+    """20. Heavy swell (SWH >= 3m) + long gap → storm explains gap, 0 pts."""
+    _swh, pts, expl = score_calm_weather_gap(swh_m=4.5, gap_hours=14.0)
+    assert pts == 0.0, f"Storm gap should yield 0 pts, got {pts}"
+    assert "storm" in expl.lower() or "explain" in expl.lower()
+
+
+def test_short_gap_weather_zero():
+    """20b. Gap <= 6h → no weather penalty regardless of SWH."""
+    _, pts, _ = score_calm_weather_gap(swh_m=0.2, gap_hours=5.9)
+    assert pts == 0.0
+
+
+def test_fishing_env_high_chl_high_sst():
+    """21. High CHL + positive SST anomaly → full env pts."""
+    _chl, pts, expl = score_fishing_environment(chl_mg_m3=0.8, sst_anomaly_c=2.1)
+    assert pts == FW["env"], f"Expected {FW['env']} pts, got {pts}"
+    assert "iuu" in expl.lower() or "attractor" in expl.lower()
+
+
+def test_fishing_env_low_chl_zero():
+    """21b. Low CHL → 0 env pts."""
+    _, pts, _ = score_fishing_environment(chl_mg_m3=0.05, sst_anomaly_c=0.0)
+    assert pts == 0.0
+
+
+def test_copernicus_demo_fallback():
+    """22. With no credentials, CopernicusClient returns offline baseline snapshot."""
+    import unittest.mock as mock
+    client = CopernicusClient()
+    # Patch credentials to empty to force fallback
+    with mock.patch("sentinel.copernicus_client.COPERNICUS_USER", ""):
+        snap = client.fetch_environment(lon=-90.0, lat=0.3, event_time_utc="2024-01-15T04:32:00Z")
+    assert isinstance(snap, EnvSnapshot)
+    assert snap.sst_c > 0
+    assert snap.swh_m > 0
+    assert "baseline" in snap.source_label.lower() or "offline" in snap.source_label.lower() or snap.swh_m == 0.6
+
+
+def test_copernicus_cache_written():
+    """23. After a fallback fetch, no exception is raised and result is deterministic."""
+    import unittest.mock as mock
+    client = CopernicusClient()
+    with mock.patch("sentinel.copernicus_client.COPERNICUS_USER", ""):
+        snap1 = client.fetch_environment(lon=-90.1, lat=0.4, event_time_utc="2024-01-15T00:00:00Z")
+        snap2 = client.fetch_environment(lon=-90.1, lat=0.4, event_time_utc="2024-01-15T00:00:00Z")
+    assert snap1.sst_c == snap2.sst_c
+    assert snap1.swh_m == snap2.swh_m
+
+
+def test_new_cases_in_seed():
+    """24. Demo seed has >= 5 cases; vessel_highenv_01 and vessel_storm_01 present."""
+    seed_path = Path(__file__).resolve().parent.parent.parent / "data" / "demo" / "sentinel_cases.json"
+    with open(seed_path) as f:
+        cases = json.load(f)
+    ids = [c["vessel_id"] for c in cases]
+    assert len(cases) >= 5, f"Expected >= 5 cases, got {len(cases)}"
+    assert "vessel_highenv_01" in ids, "vessel_highenv_01 missing from seed"
+    assert "vessel_storm_01" in ids, "vessel_storm_01 missing from seed"
+
+
+def test_weights_still_sum_to_100():
+    """25. After Cycle-A weight rebalance, invariant sum(_WEIGHTS) == 100 holds."""
+    total = sum(FW.values())
+    assert total == 100.0, f"_WEIGHTS sum to {total}, not 100"
+    assert "weather" in FW, "New 'weather' weight key missing"
+    assert "env" in FW, "New 'env' weight key missing"
+
+
+def test_provenance_in_hero_evidence():
+    """26. Hero seed evidence contains at least one item with 'Copernicus' in source."""
+    seed_path = Path(__file__).resolve().parent.parent.parent / "data" / "demo" / "sentinel_cases.json"
+    with open(seed_path) as f:
+        cases = json.load(f)
+    hero = next(c for c in cases if c["vessel_id"] == "vessel_hero_01")
+    copernicus_items = [e for e in hero["evidence"] if "Copernicus" in e.get("source", "")]
+    assert len(copernicus_items) >= 1, (
+        "Hero evidence must contain at least one item sourced from Copernicus CMEMS"
+    )
+

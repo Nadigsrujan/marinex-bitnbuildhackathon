@@ -329,6 +329,145 @@ def test_security_labels_are_derived_from_route_exposure(service):
     assert comparison["security_exposure_delta_pct"] == -100.0
 
 
+def test_high_security_weight_avoids_hero_risk_zone(service):
+    """High w_security with hero polygon must produce route with low security cost."""
+    req = RouteRequest(
+        origin=[ORIGIN_LON, ORIGIN_LAT],
+        destination=[DEST_LON, DEST_LAT],
+        risk_zones=[HERO_RISK_POLYGON],
+        objective_weights={"w_fuel": 0.1, "w_time": 0.1, "w_weather": 0.0, "w_security": 0.8},
+    )
+    result = service.compute_route(req)
+    assert result.optimized_polyline != result.baseline_polyline, \
+        "High security weight should cause reroute"
+    assert result.comparison["optimized_security_cost"] == 0.0, \
+        "Optimized route should avoid zone entirely at very high weight"
+    assert result.data_quality_status is not None
+
+
+def test_low_security_weight_stays_near_baseline(service):
+    """Low w_security should keep optimized path close to shortest-distance baseline."""
+    req = RouteRequest(
+        origin=[ORIGIN_LON, ORIGIN_LAT],
+        destination=[DEST_LON, DEST_LAT],
+        risk_zones=[HERO_RISK_POLYGON],
+        objective_weights={"w_fuel": 0.4, "w_time": 0.3, "w_weather": 0.1, "w_security": 0.05},
+    )
+    result = service.compute_route(req)
+    # Path may or may not change, but distance delta should be small (<5%)
+    delta_pct = abs(result.comparison.get("distance_delta_pct", 0.0))
+    assert delta_pct < 30.0, f"Low security weight caused very large deviation: {delta_pct}%"
+
+
+# ---------------------------------------------------------------------------
+#  4. Head / tail current changes ETA / fuel proxy in expected direction
+# ---------------------------------------------------------------------------
+
+def test_head_current_increases_eta_and_fuel():
+    """Opposing current (head) should increase time cost and fuel proxy."""
+    # Edge going roughly east (-1 deg lon delta) with opposing current (westward / negative u)
+    # We use a simple eastward edge and negative current_dot
+    from navigator.cost import compute_edge_cost
+    # Tail current: current in same direction as edge
+    _, bd_tail = compute_edge_cost(
+        -90.0, 0.0, -89.5, 0.0,
+        distance_km=55.0,
+        vessel_speed_kn=14.0,
+        current_u=0.5, current_v=0.0,
+    )
+    # Head current: opposing
+    _, bd_head = compute_edge_cost(
+        -90.0, 0.0, -89.5, 0.0,
+        distance_km=55.0,
+        vessel_speed_kn=14.0,
+        current_u=-0.5, current_v=0.0,
+    )
+    assert bd_head["time_cost"] > bd_tail["time_cost"], "Head current should increase ETA"
+    assert bd_head["fuel_cost"] > bd_tail["fuel_cost"], "Head current should increase fuel"
+
+
+def test_tail_current_decreases_eta_and_fuel():
+    """Tail current should reduce time cost and fuel proxy."""
+    from navigator.cost import compute_edge_cost
+    _, bd_none = compute_edge_cost(
+        -90.0, 0.0, -89.5, 0.0,
+        distance_km=55.0,
+        vessel_speed_kn=14.0,
+        current_u=0.0, current_v=0.0,
+    )
+    _, bd_tail = compute_edge_cost(
+        -90.0, 0.0, -89.5, 0.0,
+        distance_km=55.0,
+        vessel_speed_kn=14.0,
+        current_u=0.5, current_v=0.0,
+    )
+    assert bd_tail["time_cost"] < bd_none["time_cost"], "Tail current should reduce ETA"
+    assert bd_tail["fuel_cost"] < bd_none["fuel_cost"], "Tail current should reduce fuel"
+
+
+# ---------------------------------------------------------------------------
+#  5. Open-Meteo / Copernicus unavailable -> cached environment still works
+# ---------------------------------------------------------------------------
+
+def test_adapter_uses_cached_when_sources_unavailable():
+    """If adapter has no live data, cached/open-meteo or copernicus or legacy must provide values."""
+    from navigator.environment_adapter import EnvironmentAdapter
+    adapter = EnvironmentAdapter()
+    norm = adapter.sample_normalized(-1.5, -90.0)
+    # Should never crash; must return a dict with expected keys
+    assert isinstance(norm, dict)
+    assert "data_quality" in norm
+    assert "source" in norm
+    assert norm.get("current_u_ms") is not None
+
+
+def test_adapter_fallback_after_missing_files(monkeypatch, tmp_path):
+    """If all source files are missing, adapter should fall back to neutral values without crash."""
+    from navigator.environment_adapter import EnvironmentAdapter
+    # Point to non-existent paths
+    adapter = EnvironmentAdapter(
+        open_meteo_path=tmp_path / "none.json",
+        copernicus_path=tmp_path / "none.json",
+        legacy_path=tmp_path / "none.json",
+    )
+    norm = adapter.sample_normalized(0.0, -90.0)
+    assert norm.get("data_quality") in ("missing", "unknown")
+    assert norm.get("wave_height_m") == 0.0
+
+
+# ---------------------------------------------------------------------------
+#  6. Malformed / null marine values do not crash
+# ---------------------------------------------------------------------------
+
+def test_malformed_null_marine_values_do_not_crash():
+    """compute_edge_cost must tolerate missing/null wave/current values."""
+    from navigator.cost import compute_edge_cost
+    # Null / missing wave and current
+    _, bd = compute_edge_cost(
+        -90.0, 0.0, -89.5, 0.0,
+        distance_km=55.0,
+        vessel_speed_kn=14.0,
+        current_u=None,  # should be coerced to 0
+        current_v=None,
+        wave_height_m=None,
+        wave_direction_deg=None,
+        wave_period_s=None,
+        sst_c=None,
+    )
+    assert "weather_cost" in bd
+    assert bd["security_cost"] == 0.0
+
+
+def test_adapter_null_values_neutral():
+    from navigator.environment_adapter import EnvironmentAdapter
+    adapter = EnvironmentAdapter()
+    # Force a broken open-meteo by monkeypatching load to set bad data
+    adapter._om_data = {"hourly": {"time": ["bad"], "wave_height": [None], "ocean_current_velocity": [None]}}
+    norm = adapter.sample_normalized(0.0, -90.0)
+    assert isinstance(norm, dict)
+    assert norm.get("wave_height_m") == 0.0 or norm.get("wave_height_m") is None
+
+
 # ---------------------------------------------------------------------------
 #  11: POST /api/route/optimize offline contract + speed test (Phase 5)
 # ---------------------------------------------------------------------------

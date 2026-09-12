@@ -1,0 +1,17 @@
+{
+  "fetched_at": "2024-01-15T04:32:00Z",
+  "source_label": "Copernicus CMEMS (offline baseline \u2014 Galapagos, Jan 2024)",
+  "bbox": {"lon_min": -91.0, "lon_max": -89.0, "lat_min": -1.0, "lat_max": 1.0},
+  "sst_c": 26.8,
+  "sst_anomaly_c": 1.2,
+  "swh_m": 0.6,
+  "chl_mg_m3": 0.45,
+  "u_current_ms": -0.12,
+  "v_current_ms": 0.08,
+  "dataset_ids": {
+    "sst": "SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001",
+    "swh": "GLOBAL_ANALYSIS_FORECAST_WAV_001_027",
+    "chl": "OCEANCOLOUR_GLO_BGC_L4_NRT_009_102",
+    "currents": "GLOBAL_ANALYSISFORECAST_PHY_001_024"
+  }
+}

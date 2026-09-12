@@ -9,13 +9,15 @@ the SUPERVISOR cross-agent bridge.
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List, Optional
 
 from schemas.models import RouteRequest, RouteResult
 from navigator.graph import OceanGraph
 from navigator.environment import OceanEnvironment
+from navigator.environment_adapter import EnvironmentAdapter
 from navigator.router_engine import baseline_dijkstra, optimized_astar
-from navigator.cost import compute_edge_cost
+from navigator.cost import compute_edge_cost, _edge_in_risk_zones
 from core.logging import get_logger
 
 logger = get_logger("navigator.service")
@@ -23,6 +25,7 @@ logger = get_logger("navigator.service")
 # Module-level singletons (built once, reused across requests)
 _graph: Optional[OceanGraph] = None
 _environment: Optional[OceanEnvironment] = None
+_adapter: Optional[EnvironmentAdapter] = None
 
 
 def _get_graph() -> OceanGraph:
@@ -39,6 +42,13 @@ def _get_environment() -> OceanEnvironment:
     return _environment
 
 
+def _get_adapter() -> EnvironmentAdapter:
+    global _adapter
+    if _adapter is None:
+        _adapter = EnvironmentAdapter()
+    return _adapter
+
+
 class NavigatorService:
     """
     Orchestrates baseline-vs-optimised route computation.
@@ -47,6 +57,7 @@ class NavigatorService:
     def __init__(self):
         self._graph = _get_graph()
         self._env = _get_environment()
+        self._adapter = _get_adapter()
 
     def compute_route(self, request: RouteRequest) -> RouteResult:
         """
@@ -70,9 +81,10 @@ class NavigatorService:
         baseline_fuel = baseline_dist * request.fuel_rate_proxy
 
         # -- Optimised (multi-objective A*) --
+        # Pass adapter for normalized environment sampling
         opt_result = optimized_astar(
             self._graph,
-            self._env,
+            self._adapter,
             origin_lon, origin_lat,
             dest_lon, dest_lat,
             vessel_speed_kn=request.vessel_speed_kn,
@@ -147,6 +159,139 @@ class NavigatorService:
             "mode": mode,
         }
 
+        # ------------------------------------------------------------------
+        #  VISUALIZATION HANDOFF (M4) — sampled points + cost decomposition
+        # ------------------------------------------------------------------
+        env_samples: List[Dict[str, Any]] = []
+        current_vectors: List[Dict[str, Any]] = []
+        qualities: List[str] = []
+        risk_intersections: List[Dict[str, Any]] = []
+
+        # Sample along optimized polyline (waypoints + midpoints), cap to ~10
+        sample_pts = []
+        for i in range(len(opt_poly) - 1):
+            a = opt_poly[i]
+            b = opt_poly[i + 1]
+            sample_pts.append(a)
+            sample_pts.append([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])
+        seen = set()
+        deduped = []
+        for pt in sample_pts:
+            key = (round(pt[0], 3), round(pt[1], 3))
+            if key not in seen and len(deduped) < 12:
+                seen.add(key)
+                deduped.append(pt)
+        # Ensure at least origin/destination
+        if len(deduped) < 2:
+            deduped = opt_poly[:min(5, len(opt_poly))]
+
+        for pt in deduped:
+            lon_pt, lat_pt = pt[0], pt[1]
+            norm = None
+            try:
+                if hasattr(self._adapter, "sample_normalized"):
+                    norm = self._adapter.sample_normalized(lat_pt, lon_pt)
+            except Exception as exc:
+                logger.warning("Adapter sample failed at %s,%s: %s", lon_pt, lat_pt, exc)
+            if norm:
+                env_samples.append({
+                    "lon": round(lon_pt, 4),
+                    "lat": round(lat_pt, 4),
+                    "time": norm.get("time"),
+                    "wave_height_m": norm.get("wave_height_m"),
+                    "wave_direction_deg": norm.get("wave_direction_deg"),
+                    "wave_period_s": norm.get("wave_period_s"),
+                    "current_speed_ms": norm.get("current_speed_ms"),
+                    "current_direction_deg": norm.get("current_direction_deg"),
+                    "sst_c": norm.get("sst_c"),
+                    "source": norm.get("source"),
+                    "data_quality": norm.get("data_quality", "unknown"),
+                })
+                current_vectors.append({
+                    "lon": round(lon_pt, 4),
+                    "lat": round(lat_pt, 4),
+                    "u_ms": norm.get("current_u_ms"),
+                    "v_ms": norm.get("current_v_ms"),
+                    "speed_ms": norm.get("current_speed_ms"),
+                    "direction_deg": norm.get("current_direction_deg"),
+                    "source": norm.get("source"),
+                })
+                qualities.append(str(norm.get("data_quality", "unknown")))
+
+        # Risk-zone intersections / proximity along optimized segments
+        if request.risk_zones:
+            for i in range(len(opt_poly) - 1):
+                s = opt_poly[i]
+                e = opt_poly[i + 1]
+                intersected = False
+                near = False
+                try:
+                    intersected = _edge_in_risk_zones(s[0], s[1], e[0], e[1], request.risk_zones)
+                    if not intersected:
+                        mid_lon = (s[0] + e[0]) / 2
+                        mid_lat = (s[1] + e[1]) / 2
+                        for zone in request.risk_zones:
+                            if zone.get("type") == "Polygon":
+                                outer = zone.get("coordinates", [[]])[0]
+                                for pt in outer:
+                                    d = math.hypot(mid_lon - pt[0], mid_lat - pt[1])
+                                    if d < 0.3:
+                                        near = True
+                                        break
+                except Exception:
+                    pass
+                if intersected or near:
+                    risk_intersections.append({
+                        "segment_index": i,
+                        "start": s,
+                        "end": e,
+                        "intersected": intersected,
+                        "near": near,
+                    })
+
+        # Cost decomposition for both routes
+        baseline_breakdown = {
+            "fuel_cost": round(baseline_fuel, 2),
+            "time_cost": round(baseline_eta, 2),
+            "weather_cost": 0.0,
+            "security_cost": round(baseline_security_cost, 2),
+            "wave_exposure": 0.0,
+            "current_effect": 0.0,
+        }
+        opt_breakdown = {
+            "fuel_cost": round(opt_fuel, 2),
+            "time_cost": round(opt_time_cost, 2),
+            "weather_cost": round(opt_weather, 2),
+            "security_cost": round(opt_security, 2),
+            "wave_exposure": round(opt_breakdown.get("wave_exposure", 0.0), 2) if isinstance(opt_breakdown, dict) else 0.0,
+            "current_effect": round(opt_breakdown.get("current_effect", 0.0), 2) if isinstance(opt_breakdown, dict) else 0.0,
+        }
+        cost_decomposition = {
+            "baseline": baseline_breakdown,
+            "optimized": opt_breakdown,
+        }
+
+        reroute_reason = None
+        if opt_poly != baseline_poly:
+            parts = []
+            if opt_dist > baseline_dist * 1.02:
+                parts.append("longer distance")
+            if opt_security < baseline_security_cost:
+                parts.append("lower security cost")
+            if request.risk_zones:
+                parts.append("avoids risk polygon")
+            reroute_reason = "Optimized route deviates to reduce composite cost (" + "; ".join(parts) + ")." if parts else "Multi-objective optimization selects different corridor."
+
+        if qualities:
+            if all(q == "good" for q in qualities):
+                data_quality_status = "good"
+            elif all(q == "missing" for q in qualities):
+                data_quality_status = "missing"
+            else:
+                data_quality_status = "partial"
+        else:
+            data_quality_status = "unknown"
+
         return RouteResult(
             baseline_polyline=baseline_poly,
             optimized_polyline=opt_poly,
@@ -157,6 +302,12 @@ class NavigatorService:
             security_cost=round(opt_security, 2),
             total_cost=round(opt_total, 2),
             comparison=comparison,
+            environment_samples=env_samples if env_samples else None,
+            current_vectors=current_vectors if current_vectors else None,
+            risk_intersections=risk_intersections if risk_intersections else None,
+            cost_decomposition=cost_decomposition,
+            reroute_reason=reroute_reason,
+            data_quality_status=data_quality_status,
         )
 
     def supports_request(self, request: RouteRequest) -> bool:

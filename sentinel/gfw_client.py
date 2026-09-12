@@ -47,6 +47,79 @@ class GFWClient:
     #  Public API
     # ------------------------------------------------------------------
 
+    def search_vessel(
+        self,
+        query: str,
+        dataset: str = "public-global-vessel-identity:latest",
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Search GFW vessel identity registry by IMO, MMSI, SSVID, or name.
+
+        Mirrors the exact API call pattern:
+            curl --location -g --request GET \
+              'https://gateway.api.globalfishingwatch.org/v3/vessels/search?query={query}&datasets[0]={dataset}' \
+              -H "Authorization: Bearer [TOKEN]"
+
+        Returns the first matching entry dict, or None.
+        Uses disk-cache in data/cache/gfw/vessel_{query}.json to avoid
+        redundant API calls across requests.
+        """
+        import time
+        import urllib.request
+        import urllib.parse
+
+        cache_key = f"vessel_{urllib.parse.quote(str(query), safe='')}"
+        cached = self._check_cache(cache_key)
+        if cached:
+            logger.info("GFW vessel cache hit for query=%s", query)
+            return cached.get("first_entry") if isinstance(cached, dict) else None
+
+        if not GFW_API_TOKEN:
+            logger.warning("GFW_API_TOKEN not set — cannot search vessel identity.")
+            return None
+
+        # Build URL matching the exact curl request pattern
+        params = urllib.parse.urlencode({
+            "query": query,
+            "datasets[0]": dataset,
+        })
+        url = f"{GFW_BASE_URL}/vessels/search?{params}"
+        headers = {
+            "Authorization": f"Bearer {GFW_API_TOKEN}",
+            "Accept": "application/json",
+        }
+
+        for attempt in range(self._MAX_RETRIES + 1):
+            if attempt > 0:
+                backoff = 2 ** (attempt - 1)
+                logger.warning(
+                    "GFW vessel search attempt %d/%d failed — retrying in %ds.",
+                    attempt, self._MAX_RETRIES, backoff,
+                )
+                time.sleep(backoff)
+            try:
+                req = urllib.request.Request(url, headers=headers, method="GET")
+                with urllib.request.urlopen(req, timeout=GFW_TIMEOUT_S) as resp:
+                    if resp.status != 200:
+                        raise ValueError(f"GFW API returned HTTP {resp.status}")
+                    data = json.loads(resp.read().decode("utf-8"))
+                    entries = data.get("entries", [])
+                    first = entries[0] if entries else None
+                    # Flatten: top-level registryInfo is a list; take first record
+                    if first and isinstance(first.get("registryInfo"), list) and first["registryInfo"]:
+                        first = {**first, **first["registryInfo"][0]}
+                    self._write_cache(cache_key, {"first_entry": first, "total": data.get("total", 0)})
+                    logger.info(
+                        "GFW vessel search query=%s → found %d result(s).",
+                        query, data.get("total", 0),
+                    )
+                    return first
+            except Exception as exc:
+                logger.warning("GFW vessel search failed (attempt %d): %s", attempt + 1, exc)
+
+        logger.warning("GFW vessel search exhausted retries for query=%s.", query)
+        return None
+
     def fetch_events(
         self,
         event_types: Optional[List[str]] = None,

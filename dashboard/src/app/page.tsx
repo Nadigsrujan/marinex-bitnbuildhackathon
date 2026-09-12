@@ -249,7 +249,7 @@ export default function Dashboard() {
                             <div className="mt-2 pt-2 border-t border-white/5 text-xs">
                               <span className="text-slate-500">Rejected alternative: </span>
                               <span className="text-slate-400">{rejectedAlt.usv_id} </span>
-                              <span className="text-red-400/80">({rejectedAlt.rejection_reasons[0]})</span>
+                              <span className="text-red-400/80">({rejectedAlt.rejection_reasons?.[0]})</span>
                             </div>
                           )}
                         </div>

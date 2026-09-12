@@ -23,6 +23,9 @@ GFW_TIMEOUT_S: int = int(os.getenv("GFW_TIMEOUT_S", "30"))
 # -- Copernicus Marine Service --
 COPERNICUS_USER: str = os.getenv("COPERNICUS_USER", "")
 COPERNICUS_PASSWORD: str = os.getenv("COPERNICUS_PASSWORD", "")
+COPERNICUS_BASE_URL: str = "https://data.marine.copernicus.eu"
+COPERNICUS_TIMEOUT_S: int = int(os.getenv("COPERNICUS_TIMEOUT_S", "60"))
+COPERNICUS_CACHE_TTL_S: int = int(os.getenv("COPERNICUS_CACHE_TTL_S", "3600"))
 
 # -- Server --
 API_HOST: str = os.getenv("API_HOST", "0.0.0.0")

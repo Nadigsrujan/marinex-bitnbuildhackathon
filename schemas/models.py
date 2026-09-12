@@ -118,6 +118,30 @@ class RouteResult(BaseModel):
         ...,
         description="Decomposed baseline vs optimised metrics and percent deltas",
     )
+    environment_samples: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Normalized marine samples along optimized route for charts/tooltips",
+    )
+    current_vectors: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Current vector data at sample waypoints",
+    )
+    risk_intersections: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Risk-zone intersections / proximity entries along route",
+    )
+    cost_decomposition: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Per-component cost breakdown (fuel/time/weather/security/wave) for both routes",
+    )
+    reroute_reason: Optional[str] = Field(
+        default=None,
+        description="Human-readable reason for deviation from baseline",
+    )
+    data_quality_status: Optional[str] = Field(
+        default=None,
+        description="Overall data-quality disclosure (good/partial/missing)",
+    )
 
 
 # ---------------------------------------------------------------------------

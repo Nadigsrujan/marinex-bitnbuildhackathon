@@ -23,7 +23,9 @@ from schemas.models import EvidenceItem
 from sentinel.features import (
     _WEIGHTS,
     score_ais_gap,
+    score_calm_weather_gap,
     score_fishing,
+    score_fishing_environment,
     score_loitering,
     score_protected_area,
     score_repeat,
@@ -74,6 +76,11 @@ class RiskScorer:
         protected_area_relation: str = "outside",
         protected_area_distance_km: float = 999.0,
         repeat_count: int = 0,
+        # Copernicus-backed environmental parameters (optional)
+        swh_m: float = 0.6,
+        chl_mg_m3: float = 0.0,
+        sst_anomaly_c: float = 0.0,
+        env_source_label: str = "Copernicus Marine CMEMS",
     ) -> Tuple[float, str, List[EvidenceItem], float]:
         """
         Returns (risk_score, risk_level, evidence_list, confidence).
@@ -152,6 +159,34 @@ class RiskScorer:
                 )
             )
             total += pts_r
+
+        # 6. Calm-Weather AIS Gap (Copernicus SWH)
+        val_w, pts_w, expl_w = score_calm_weather_gap(swh_m, gap_hours)
+        if pts_w > 0:
+            evidence.append(
+                EvidenceItem(
+                    feature="calm_weather_ais_gap",
+                    value=val_w,
+                    points=pts_w,
+                    source=env_source_label,
+                    explanation=expl_w,
+                )
+            )
+            total += pts_w
+
+        # 7. Fishing Environment (Copernicus CHL / SST)
+        val_e, pts_e, expl_e = score_fishing_environment(chl_mg_m3, sst_anomaly_c)
+        if pts_e > 0:
+            evidence.append(
+                EvidenceItem(
+                    feature="fishing_environment",
+                    value=val_e,
+                    points=pts_e,
+                    source=env_source_label,
+                    explanation=expl_e,
+                )
+            )
+            total += pts_e
 
         # Cap at 100 -- because sum(_WEIGHTS) == 100, this cap should never
         # silently truncate, but is kept as a safety net.

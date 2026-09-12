@@ -39,7 +39,8 @@ def test_hero_scenario_references_existing_cross_module_inputs() -> None:
     assert scenario.route.route_id == "route_hero_01"
     assert scenario.route.origin == [-88.5, 1.2]
     assert scenario.route.destination == [-91.5, -1.8]
-    assert counts == {"vessel_cases": 3, "debris_points": 24, "usvs": 3}
+    # NOTE: SENTINEL Cycle-A added vessel_highenv_01 and vessel_storm_01, count is now 5.
+    assert counts == {"vessel_cases": 5, "debris_points": 24, "usvs": 3}
 
 
 def test_preliminary_grouping_is_deterministic_and_canonical() -> None:

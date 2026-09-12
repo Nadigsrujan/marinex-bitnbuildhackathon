@@ -7,6 +7,8 @@
     "gap_start": "2024-01-14T10:00:00Z",
     "gap_end": "2024-01-15T04:30:00Z",
     "gap_hours": 18.5,
+    "lon": -90.0,
+    "lat": 0.3,
     "geometry": {
       "type": "Polygon",
       "coordinates": [[[-90.5, -0.2], [-89.5, -0.2], [-89.5, 0.8], [-90.5, 0.8], [-90.5, -0.2]]]
@@ -15,15 +17,15 @@
     "fishing_signal": true,
     "loitering_signal": true,
     "repeat_count": 2,
-    "risk_score": 83.04,
+    "risk_score": 89.19,
     "risk_level": "CRITICAL",
     "evidence": [
       {
         "feature": "ais_gap_hours",
         "value": 18.5,
-        "points": 23.12,
+        "points": 19.27,
         "source": "GFW Events API v3",
-        "explanation": "AIS transponder was silent for 18.5 hours -- contributes 23.12 risk points."
+        "explanation": "AIS transponder was silent for 18.5 hours -- contributes 19.27 risk points."
       },
       {
         "feature": "fishing_near_mpa",
@@ -52,9 +54,127 @@
         "points": 4.0,
         "source": "Historical Records",
         "explanation": "2 prior incident(s) on record -- contributes 4 risk points."
+      },
+      {
+        "feature": "calm_weather_ais_gap",
+        "value": 0.6,
+        "points": 5.0,
+        "source": "Copernicus Marine CMEMS (offline baseline — Galapagos, Jan 2024)",
+        "explanation": "AIS gap of 18.5 h occurred in calm seas (SWH 0.6 m) — no meteorological justification for transponder disable."
+      },
+      {
+        "feature": "fishing_environment",
+        "value": 0.45,
+        "points": 5.0,
+        "source": "Copernicus Marine CMEMS (offline baseline — Galapagos, Jan 2024)",
+        "explanation": "High-productivity fishing environment detected: CHL 0.450 mg/m³, SST anomaly +1.2 °C — significant overlap with known IUU fishing attractor zone."
       }
     ],
-    "confidence": 0.92
+    "confidence": 0.93,
+    "source_badge": "Global Fishing Watch v3 + Copernicus CMEMS"
+  },
+  {
+    "vessel_id": "vessel_highenv_01",
+    "name": "SHENG FA 8",
+    "flag": "CN",
+    "event_time": "2024-01-16T02:15:00Z",
+    "gap_start": "2024-01-15T18:00:00Z",
+    "gap_end": "2024-01-16T02:00:00Z",
+    "gap_hours": 8.0,
+    "lon": -86.3,
+    "lat": 2.1,
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [[[-86.82, 1.65], [-85.78, 1.65], [-85.78, 2.55], [-86.82, 2.55], [-86.82, 1.65]]]
+    },
+    "protected_area_relation": "near",
+    "fishing_signal": true,
+    "loitering_signal": false,
+    "repeat_count": 1,
+    "risk_score": 67.0,
+    "risk_level": "HIGH",
+    "evidence": [
+      {
+        "feature": "ais_gap_hours",
+        "value": 8.0,
+        "points": 8.33,
+        "source": "GFW Events API v3",
+        "explanation": "AIS transponder was silent for 8.0 hours -- contributes 8.33 risk points."
+      },
+      {
+        "feature": "fishing_near_mpa",
+        "value": true,
+        "points": 25.0,
+        "source": "GFW Events API v3",
+        "explanation": "Apparent fishing detected near a Marine Protected Area -- significant concern for IUU fishing."
+      },
+      {
+        "feature": "protected_area_proximity",
+        "value": "near",
+        "points": 11.6,
+        "source": "Protected Planet WDPA",
+        "explanation": "Vessel is 21.8 km from the nearest MPA boundary."
+      },
+      {
+        "feature": "repeat_offender",
+        "value": 1,
+        "points": 2.0,
+        "source": "Historical Records",
+        "explanation": "1 prior incident(s) on record -- contributes 2 risk points."
+      },
+      {
+        "feature": "calm_weather_ais_gap",
+        "value": 0.8,
+        "points": 5.0,
+        "source": "Copernicus Marine CMEMS (live)",
+        "explanation": "AIS gap of 8.0 h occurred in calm seas (SWH 0.8 m) — no meteorological justification for transponder disable."
+      },
+      {
+        "feature": "fishing_environment",
+        "value": 0.72,
+        "points": 5.0,
+        "source": "Copernicus Marine CMEMS (live)",
+        "explanation": "High-productivity fishing environment detected: CHL 0.720 mg/m³, SST anomaly +1.8 °C — significant overlap with known IUU fishing attractor zone."
+      }
+    ],
+    "confidence": 0.82,
+    "source_badge": "Global Fishing Watch v3 + Copernicus CMEMS"
+  },
+  {
+    "vessel_id": "vessel_storm_01",
+    "name": "NOVA PESCA 3",
+    "flag": "VE",
+    "event_time": "2024-01-17T09:00:00Z",
+    "gap_start": "2024-01-16T20:00:00Z",
+    "gap_end": "2024-01-17T09:00:00Z",
+    "gap_hours": 13.0,
+    "lon": -79.5,
+    "lat": 8.2,
+    "geometry": {
+      "type": "Point",
+      "coordinates": [-79.5, 8.2]
+    },
+    "protected_area_relation": "outside",
+    "fishing_signal": false,
+    "loitering_signal": false,
+    "repeat_count": 0,
+    "risk_score": 13.54,
+    "risk_level": "LOW",
+    "evidence": [
+      {
+        "feature": "ais_gap_hours",
+        "value": 13.0,
+        "points": 13.54,
+        "source": "GFW Events API v3",
+        "explanation": "AIS transponder was silent for 13.0 hours -- contributes 13.54 risk points."
+      }
+    ],
+    "confidence": 0.42,
+    "source_badge": "Global Fishing Watch v3 + Copernicus CMEMS",
+    "_copernicus_context": {
+      "swh_m": 4.2,
+      "note": "Heavy swell (SWH 4.2 m) at time of gap — storm conditions explain AIS blackout. calm_weather_ais_gap awarded 0 pts."
+    }
   },
   {
     "vessel_id": "vessel_control_01",
@@ -64,6 +184,8 @@
     "gap_start": null,
     "gap_end": null,
     "gap_hours": 0.0,
+    "lon": -89.0,
+    "lat": 1.5,
     "geometry": {
       "type": "Point",
       "coordinates": [-89.0, 1.5]
@@ -75,7 +197,8 @@
     "risk_score": 0.0,
     "risk_level": "LOW",
     "evidence": [],
-    "confidence": 0.3
+    "confidence": 0.3,
+    "source_badge": "Global Fishing Watch v3"
   },
   {
     "vessel_id": "vessel_control_02",
@@ -85,6 +208,8 @@
     "gap_start": "2024-01-15T06:00:00Z",
     "gap_end": "2024-01-15T08:00:00Z",
     "gap_hours": 2.0,
+    "lon": -88.0,
+    "lat": 0.5,
     "geometry": {
       "type": "Point",
       "coordinates": [-88.0, 0.5]
@@ -93,17 +218,18 @@
     "fishing_signal": false,
     "loitering_signal": false,
     "repeat_count": 0,
-    "risk_score": 2.5,
+    "risk_score": 2.08,
     "risk_level": "LOW",
     "evidence": [
       {
         "feature": "ais_gap_hours",
         "value": 2.0,
-        "points": 2.5,
+        "points": 2.08,
         "source": "GFW Events API v3",
-        "explanation": "AIS transponder was silent for 2.0 hours -- contributes 2.50 risk points."
+        "explanation": "AIS transponder was silent for 2.0 hours -- contributes 2.08 risk points."
       }
     ],
-    "confidence": 0.35
+    "confidence": 0.35,
+    "source_badge": "Global Fishing Watch v3"
   }
 ]

@@ -8,3 +8,4 @@ env/
 .DS_Store
 plan.md
 *.log
+implementation_plan.md
