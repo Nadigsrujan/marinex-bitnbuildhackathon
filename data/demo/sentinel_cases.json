@@ -15,27 +15,27 @@
     "fishing_signal": true,
     "loitering_signal": true,
     "repeat_count": 2,
-    "risk_score": 85.0,
+    "risk_score": 83.04,
     "risk_level": "CRITICAL",
     "evidence": [
       {
         "feature": "ais_gap_hours",
         "value": 18.5,
-        "points": 23.13,
+        "points": 23.12,
         "source": "GFW Events API v3",
-        "explanation": "AIS transponder was silent for 18.5 hours — contributes 23.13 risk points."
+        "explanation": "AIS transponder was silent for 18.5 hours -- contributes 23.12 risk points."
       },
       {
         "feature": "fishing_near_mpa",
         "value": true,
         "points": 25.0,
         "source": "GFW Events API v3",
-        "explanation": "Apparent fishing detected near a Marine Protected Area — significant concern for IUU fishing."
+        "explanation": "Apparent fishing detected near a Marine Protected Area -- significant concern for illegal, unreported, or unregulated (IUU) fishing."
       },
       {
         "feature": "protected_area_proximity",
         "value": "near",
-        "points": 12.0,
+        "points": 15.92,
         "source": "Protected Planet WDPA",
         "explanation": "Vessel is 10.2 km from the nearest MPA boundary."
       },
@@ -44,14 +44,14 @@
         "value": true,
         "points": 15.0,
         "source": "GFW Events API v3",
-        "explanation": "Vessel exhibited loitering behaviour — extended period at < 3 knots near MPA boundary waters."
+        "explanation": "Vessel exhibited loitering behaviour -- extended period at < 3 knots near MPA boundary waters."
       },
       {
         "feature": "repeat_offender",
         "value": 2,
         "points": 4.0,
         "source": "Historical Records",
-        "explanation": "2 prior incident(s) on record — contributes 4 risk points."
+        "explanation": "2 prior incident(s) on record -- contributes 4 risk points."
       }
     ],
     "confidence": 0.92
@@ -101,7 +101,7 @@
         "value": 2.0,
         "points": 2.5,
         "source": "GFW Events API v3",
-        "explanation": "AIS transponder was silent for 2.0 hours — contributes 2.5 risk points."
+        "explanation": "AIS transponder was silent for 2.0 hours -- contributes 2.50 risk points."
       }
     ],
     "confidence": 0.35

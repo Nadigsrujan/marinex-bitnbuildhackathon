@@ -1,11 +1,12 @@
 """
-SENTINEL — Protected Area Client
+SENTINEL -- Protected Area Client
 ==================================
 Loads local WDPA GeoJSON data for the Galapagos Marine Reserve and
-performs Shapely-based spatial analysis: point-in-polygon containment,
-distance-to-boundary in kilometres, and polygon buffering.
+performs spatial analysis: point-in-polygon containment,
+distance-to-boundary in kilometres, segment intersection, and polygon buffering.
 
 Works 100% offline from data/demo/protected_areas.geojson.
+No external geometry libraries -- pure stdlib math only.
 """
 from __future__ import annotations
 
@@ -21,7 +22,7 @@ logger = get_logger("sentinel.protected_area_client")
 
 
 # ---------------------------------------------------------------------------
-#  Lightweight geometry helpers (no Shapely dependency required)
+#  Lightweight geometry helpers (no Shapely dependency)
 # ---------------------------------------------------------------------------
 
 def _point_in_polygon(px: float, py: float, polygon: List[List[float]]) -> bool:
@@ -40,7 +41,7 @@ def _point_in_polygon(px: float, py: float, polygon: List[List[float]]) -> bool:
 
 def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     """Great-circle distance between two points in kilometres."""
-    R = 6371.0  # Earth radius in km
+    R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = (
@@ -63,6 +64,35 @@ def _point_to_polygon_min_distance_km(
             min_dist = d
     return min_dist
 
+
+def _segments_intersect(
+    ax: float, ay: float, bx: float, by: float,
+    cx: float, cy: float, dx: float, dy: float,
+) -> bool:
+    """
+    Test if line segment AB intersects line segment CD using cross-product method.
+    Returns True if they share any interior point (not just endpoints).
+    """
+    def _cross(ox: float, oy: float, px: float, py: float, qx: float, qy: float) -> float:
+        return (px - ox) * (qy - oy) - (py - oy) * (qx - ox)
+
+    d1 = _cross(cx, cy, dx, dy, ax, ay)
+    d2 = _cross(cx, cy, dx, dy, bx, by)
+    d3 = _cross(ax, ay, bx, by, cx, cy)
+    d4 = _cross(ax, ay, bx, by, dx, dy)
+
+    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+       ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+        return True
+
+    # Collinear / touching cases (treat touching endpoints as non-intersecting
+    # to avoid false positives on shared corridor nodes)
+    return False
+
+
+# ---------------------------------------------------------------------------
+#  ProtectedAreaClient
+# ---------------------------------------------------------------------------
 
 class ProtectedAreaClient:
     """Spatial analysis engine for Marine Protected Areas."""
@@ -115,7 +145,6 @@ class ProtectedAreaClient:
                 continue
 
             coords = geom["coordinates"]
-            # GeoJSON Polygon: first ring is the outer boundary
             outer_ring = coords[0] if coords else []
 
             if _point_in_polygon(lon, lat, outer_ring):
@@ -128,6 +157,49 @@ class ProtectedAreaClient:
                 best_relation = "near" if dist < 50.0 else "outside"
 
         return (best_relation, best_dist, best_name)
+
+    def segment_intersects_area(
+        self, lon1: float, lat1: float, lon2: float, lat2: float
+    ) -> bool:
+        """
+        Test if the line segment from (lon1, lat1) to (lon2, lat2) crosses
+        any boundary edge of any loaded MPA polygon.
+
+        Returns True if the segment intersects any MPA boundary ring,
+        False if the segment is fully outside (or fully inside) all MPAs.
+        Also returns True if either endpoint is inside an MPA polygon.
+        """
+        # Check if either endpoint is inside an MPA
+        if self._any_point_inside(lon1, lat1) or self._any_point_inside(lon2, lat2):
+            return True
+
+        # Check segment vs every MPA boundary edge
+        for feature in self._areas:
+            geom = feature.get("geometry", {})
+            if geom.get("type") != "Polygon":
+                continue
+            coords = geom["coordinates"]
+            for ring in coords:
+                n = len(ring)
+                for i in range(n - 1):
+                    cx, cy = ring[i][0], ring[i][1]
+                    dx, dy = ring[i + 1][0], ring[i + 1][1]
+                    if _segments_intersect(lon1, lat1, lon2, lat2, cx, cy, dx, dy):
+                        return True
+
+        return False
+
+    def _any_point_inside(self, lon: float, lat: float) -> bool:
+        """Return True if the point is inside any loaded MPA polygon."""
+        for feature in self._areas:
+            geom = feature.get("geometry", {})
+            if geom.get("type") != "Polygon":
+                continue
+            coords = geom["coordinates"]
+            outer_ring = coords[0] if coords else []
+            if _point_in_polygon(lon, lat, outer_ring):
+                return True
+        return False
 
     def get_boundary_polygon(self, area_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Return the GeoJSON geometry of the first (or named) protected area."""

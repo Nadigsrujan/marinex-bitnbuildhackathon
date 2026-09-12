@@ -1,5 +1,5 @@
 """
-SENTINEL — Explainable Risk Scoring Engine
+SENTINEL -- Explainable Risk Scoring Engine
 ============================================
 Deterministic, additive scoring (0-100) with full evidence trail.
 
@@ -10,6 +10,10 @@ Risk categories:
     MEDIUM  30-59
     HIGH    60-79
     CRITICAL 80-100
+
+The _WEIGHTS table is the single source of truth (imported from features.py).
+sum(_WEIGHTS.values()) == 100 is an invariant enforced at import time so
+that the 100-point cap never silently truncates evidence.
 """
 from __future__ import annotations
 
@@ -17,6 +21,7 @@ from typing import Any, Dict, List, Tuple
 
 from schemas.models import EvidenceItem
 from sentinel.features import (
+    _WEIGHTS,
     score_ais_gap,
     score_fishing,
     score_loitering,
@@ -26,6 +31,14 @@ from sentinel.features import (
 from core.logging import get_logger
 
 logger = get_logger("sentinel.risk_score")
+
+# Re-export for consumers who want the weights table
+WEIGHTS = _WEIGHTS
+
+# Verify invariant at module load (defensive)
+assert sum(_WEIGHTS.values()) == 100.0, (
+    f"_WEIGHTS must sum to 100, got {sum(_WEIGHTS.values())}"
+)
 
 # Risk category thresholds
 _THRESHOLDS = [
@@ -49,6 +62,8 @@ class RiskScorer:
 
     Every point contribution is recorded as an EvidenceItem so the final
     score is fully auditable by judges and human reviewers.
+    The invariant sum(evidence.points) == risk_score holds for all inputs
+    where total <= 100.
     """
 
     def score(
@@ -138,19 +153,20 @@ class RiskScorer:
             )
             total += pts_r
 
-        risk_score = min(100.0, round(total, 2))
+        # Cap at 100 -- because sum(_WEIGHTS) == 100, this cap should never
+        # silently truncate, but is kept as a safety net.
+        risk_score = round(min(100.0, total), 2)
         risk_level = _categorise(risk_score)
 
-        # Confidence is based on evidence density (more signals = higher)
-        max_possible = 100.0
-        confidence = round(min(1.0, risk_score / max_possible + 0.3 * len(evidence) / 5), 2)
+        # Confidence: evidence density + score fraction
+        confidence = round(
+            min(1.0, risk_score / 100.0 + 0.3 * len(evidence) / 5), 2
+        )
         confidence = min(1.0, confidence)
 
         logger.info(
-            "Scored vessel: %.1f (%s) with %d evidence items",
-            risk_score,
-            risk_level,
-            len(evidence),
+            "Scored vessel: %.2f (%s) with %d evidence items",
+            risk_score, risk_level, len(evidence),
         )
 
         return (risk_score, risk_level, evidence, confidence)
