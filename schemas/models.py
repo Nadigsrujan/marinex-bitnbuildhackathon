@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -152,22 +152,42 @@ class DebrisCluster(BaseModel):
     """A geospatial cluster of marine debris."""
     cluster_id: str
     centroid: List[float]
-    estimated_mass_kg: float
-    density: float
-    impact_score: float
-    urgency: float
+    estimated_mass_kg: float = Field(ge=0, allow_inf_nan=False)
+    density: float = Field(ge=0, allow_inf_nan=False)
+    impact_score: float = Field(ge=0, le=100, allow_inf_nan=False)
+    urgency: float = Field(ge=0, le=1, allow_inf_nan=False)
     source: str
     source_points: List[List[float]]
+    predicted_positions: List[Dict[str, Any]] = Field(default_factory=list)
+    drift_vector: Dict[str, Any] = Field(default_factory=dict)
+    @field_validator("centroid")
+    @classmethod
+    def valid_centroid(cls, value: List[float]) -> List[float]:
+        if len(value) != 2 or not (-180 <= value[0] <= 180 and -89 <= value[1] <= 89):
+            raise ValueError("centroid must be finite [longitude, latitude], latitude within +/-89")
+        return value
+
+    observation_time: Optional[str] = None
+    provenance: Dict[str, Any] = Field(default_factory=dict)
 
 
 class USV(BaseModel):
     """Status snapshot of an Unmanned Surface Vehicle."""
     usv_id: str
     location: List[float]
-    capacity_kg: float
-    battery_pct: float
-    remaining_range_km: float
+    capacity_kg: float = Field(ge=0, allow_inf_nan=False)
+    battery_pct: float = Field(ge=0, le=100, allow_inf_nan=False)
+    remaining_range_km: float = Field(ge=0, allow_inf_nan=False)
     status: str
+    speed_kn: float = Field(default=5.0, gt=0, allow_inf_nan=False)
+    source_badge: str = "SIMULATED"
+
+    @field_validator("location")
+    @classmethod
+    def valid_location(cls, value: List[float]) -> List[float]:
+        if len(value) != 2 or not (-180 <= value[0] <= 180 and -89 <= value[1] <= 89):
+            raise ValueError("location must be finite [longitude, latitude], latitude within +/-89")
+        return value
 
 
 class CleanupPlan(BaseModel):
@@ -178,6 +198,10 @@ class CleanupPlan(BaseModel):
     estimated_collection_kg: float
     capacity_utilization: float
     completion_time_hours: float
+    intercept_points: List[Dict[str, Any]] = Field(default_factory=list)
+    rejected_assignments: List[Dict[str, Any]] = Field(default_factory=list)
+    feasibility_summary: Dict[str, Any] = Field(default_factory=dict)
+    provenance: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------

@@ -5,12 +5,14 @@ candidate pairing is evaluated from structured inputs, and each selected
 assignment carries the rejected alternatives so the API/UI can explain why the
 winning USV was chosen.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import math
 from typing import List
 
+from cleaner.drift import advect, MAX_HORIZON_HOURS
 from core.logging import get_logger
 from schemas.models import CleanupPlan, DebrisCluster, USV
 
@@ -60,6 +62,10 @@ class PairingEvaluation:
     travel_penalty: float
     capacity_penalty: float
     mission_score: float
+    intercept_point: List[float]
+    intercept_hours: float
+    completion_hours: float
+    range_margin_km: float
 
     def model_dump(self) -> dict:
         return asdict(self)
@@ -68,9 +74,48 @@ class PairingEvaluation:
 def evaluate_pairing(cluster: DebrisCluster, usv: USV) -> PairingEvaluation:
     """Evaluate status, battery, round-trip range, capacity, and mission score."""
 
-    one_way = haversine_km(usv.location, cluster.centroid)
-    round_trip = one_way * 2.0
     reasons: List[str] = []
+    speed = usv.speed_kn * 1.852
+    u = cluster.drift_vector.get("current_u_ms", 0.0)
+    v = cluster.drift_vector.get("current_v_ms", 0.0)
+    try:
+        u, v = float(u), float(v)
+        if not math.isfinite(u) or not math.isfinite(v):
+            raise ValueError("invalid current")
+    except (ValueError, TypeError):
+        u, v = 0.0, 0.0
+        reasons.append("invalid_drift_vector")
+
+    def target(hours):
+        return advect(cluster.centroid, u, v, hours)
+
+    def residual(hours):
+        return haversine_km(usv.location, target(hours)) - speed * hours
+
+    # Find the earliest reachable interval, then refine to sub-second precision.
+    lo, hi = 0.0, None
+    if residual(0) <= 1e-8:
+        hi = 0.0
+    else:
+        for step in range(1, 721):
+            candidate = MAX_HORIZON_HOURS * step / 720
+            if residual(candidate) <= 0:
+                hi = candidate
+                break
+            lo = candidate
+    if hi is None:
+        reasons.append("intercept_beyond_12h_forecast")
+        hi = MAX_HORIZON_HOURS
+    else:
+        for _ in range(40):
+            mid = (lo + hi) / 2
+            if residual(mid) > 0:
+                lo = mid
+            else:
+                hi = mid
+    intercept = target(hi)
+    one_way = haversine_km(usv.location, intercept)
+    round_trip = one_way * 2.0
 
     if usv.status != "idle":
         reasons.append(f"status_not_idle:{usv.status}")
@@ -107,6 +152,10 @@ def evaluate_pairing(cluster: DebrisCluster, usv: USV) -> PairingEvaluation:
         travel_penalty=travel_penalty,
         capacity_penalty=capacity_penalty,
         mission_score=mission_score,
+        intercept_point=[round(x, 7) for x in intercept],
+        intercept_hours=round(hi, 6),
+        completion_hours=round(round_trip / speed, 6),
+        range_margin_km=round(usv.remaining_range_km - round_trip, 2),
     )
 
 
@@ -142,6 +191,7 @@ def greedy_assign(
     assigned_usvs: set[str] = set()
     assignments: List[dict] = []
     route_sequences: List[List[List[float]]] = []
+    rejected = []
 
     for cluster in ordered_clusters:
         evaluations = [evaluate_pairing(cluster, usv) for usv in ordered_usvs]
@@ -151,6 +201,18 @@ def greedy_assign(
             if evaluation.feasible and evaluation.usv_id not in assigned_usvs
         ]
         candidates.sort(key=lambda item: (-item.mission_score, item.usv_id))
+        for evaluation in evaluations:
+            if not candidates or evaluation.usv_id != candidates[0].usv_id:
+                record = evaluation.model_dump()
+                if not record["rejection_reasons"]:
+                    record["rejection_reasons"] = [
+                        (
+                            "usv_already_assigned"
+                            if evaluation.usv_id in assigned_usvs
+                            else "lower_mission_score"
+                        )
+                    ]
+                rejected.append(record)
         if not candidates:
             logger.warning("No feasible unused USV for %s", cluster.cluster_id)
             continue
@@ -176,6 +238,11 @@ def greedy_assign(
                 "selected": True,
                 "feasible": True,
                 "rejection_reasons": [],
+                "intercept_point": selected.intercept_point,
+                "intercept_hours": selected.intercept_hours,
+                "completion_hours": selected.completion_hours,
+                "range_margin_km": selected.range_margin_km,
+                "source_badge": "DERIVED",
                 "mission_score": selected.mission_score,
                 "priority_score": selected.priority_score,
                 "distance_km": selected.travel_distance_km,
@@ -187,7 +254,7 @@ def greedy_assign(
         route_sequences.append(
             [
                 list(selected_usv.location),
-                list(cluster.centroid),
+                list(selected.intercept_point),
                 list(selected_usv.location),
             ]
         )
@@ -202,9 +269,6 @@ def greedy_assign(
     capacity_utilization = (
         total_collection / available_capacity if available_capacity else 0.0
     )
-    longest_mission = max(
-        (item["travel_distance_km"] for item in assignments), default=0.0
-    )
 
     return CleanupPlan(
         assignments=assignments,
@@ -212,5 +276,38 @@ def greedy_assign(
         total_distance_km=round(total_distance, 2),
         estimated_collection_kg=round(total_collection, 2),
         capacity_utilization=round(capacity_utilization, 4),
-        completion_time_hours=round(longest_mission / USV_SPEED_KMH, 2),
+        completion_time_hours=round(
+            max((a["completion_hours"] for a in assignments), default=0), 2
+        ),
+        intercept_points=[
+            {
+                "cluster_id": a["cluster_id"],
+                "usv_id": a["usv_id"],
+                "position": a["intercept_point"],
+                "horizon_hours": a["intercept_hours"],
+                "source_badge": "DERIVED",
+            }
+            for a in assignments
+        ],
+        rejected_assignments=rejected,
+        feasibility_summary={
+            "assigned": len(assignments),
+            "unassigned_clusters": [
+                c.cluster_id
+                for c in clusters
+                if c.cluster_id not in {a["cluster_id"] for a in assignments}
+            ],
+            "battery_min_pct": MIN_BATTERY_PCT,
+            "range_policy": "round_trip",
+            "forecast_horizon_hours": MAX_HORIZON_HOURS,
+        },
+        provenance={
+            "source_name": "MARINEX CLEANER",
+            "source_mode": "derived",
+            "source_badge": "DERIVED",
+            "notes": "Simulation metrics from curated debris and simulated USVs. Constant-current interception; direct outbound/return paths, no land avoidance, collection duration or battery discharge model.",
+            "environment_sources": sorted(
+                {str(c.drift_vector.get("source", "neutral")) for c in clusters}
+            ),
+        },
     )

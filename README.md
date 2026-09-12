@@ -7,7 +7,9 @@
 
 ```bash
 # Install dependencies
-pip install pydantic fastapi uvicorn pytest
+pip install pydantic fastapi uvicorn pytest requests
+# Optional connected Copernicus refresh
+pip install copernicusmarine
 
 # Validate all canonical data
 python scripts/validate_demo_data.py

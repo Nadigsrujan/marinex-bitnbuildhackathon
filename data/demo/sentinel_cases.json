@@ -91,7 +91,7 @@
     "fishing_signal": true,
     "loitering_signal": false,
     "repeat_count": 1,
-    "risk_score": 67.0,
+    "risk_score": 56.93,
     "risk_level": "HIGH",
     "evidence": [
       {

@@ -67,3 +67,7 @@ def _register_routers() -> None:
 
 
 _register_routers()
+
+# Cycle A complete domain view, independent of Cycle B orchestration state.
+from apps.api.dashboard import router as dashboard_router
+app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])

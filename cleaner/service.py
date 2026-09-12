@@ -3,11 +3,15 @@
 Provides both the Cycle 1 seed state (for integration) and full
 clustering + assignment pipeline for the SUPERVISOR cross-agent flow.
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, List
+import math
 
 from cleaner.assignment import greedy_assign
+from cleaner.drift import predict_drift
+from navigator.environment_adapter import EnvironmentAdapter
 from cleaner.clustering import cluster_debris_points
 from cleaner.data_loader import (
     load_debris_points,
@@ -29,9 +33,7 @@ class CleanerService:
         validate_scenario_references(scenario)
         points = load_debris_points()
         usvs = load_usvs()
-        clusters = cluster_debris_points(
-            points, scenario.cleanup.cluster_distance_km
-        )
+        clusters = cluster_debris_points(points, scenario.cleanup.cluster_distance_km)
         return {
             "scenario": scenario.model_dump(),
             "debris_points": [point.model_dump() for point in points],
@@ -39,14 +41,48 @@ class CleanerService:
             "preliminary_clusters": [cluster.model_dump() for cluster in clusters],
         }
 
-    def get_clusters(self) -> List[DebrisCluster]:
+    def get_clusters(
+        self, environment: List[dict] | None = None
+    ) -> List[DebrisCluster]:
         """Return debris clusters from the hero scenario seed data."""
         scenario = load_hero_scenario()
         points = load_debris_points()
         validate_scenario_references(scenario)
-        return cluster_debris_points(
-            points, scenario.cleanup.cluster_distance_km
-        )
+        clusters = cluster_debris_points(points, scenario.cleanup.cluster_distance_km)
+        return self.predict_clusters(clusters, environment)
+
+    def predict_clusters(
+        self, clusters: List[DebrisCluster], environment: List[dict] | None = None
+    ) -> List[DebrisCluster]:
+        """Attach forecasts using supplied shared samples or NAVIGATOR cache."""
+        adapter = EnvironmentAdapter() if environment is None else None
+        result = []
+        for cluster in clusters:
+            if environment is not None:
+                valid = [
+                    s
+                    for s in environment
+                    if isinstance(s, dict)
+                    and isinstance(s.get("lon"), (float, int))
+                    and isinstance(s.get("lat"), (float, int))
+                    and math.isfinite(s["lon"])
+                    and math.isfinite(s["lat"])
+                ]
+                sample = (
+                    min(
+                        valid,
+                        key=lambda s: (s["lon"] - cluster.centroid[0]) ** 2
+                        + (s["lat"] - cluster.centroid[1]) ** 2,
+                    )
+                    if valid
+                    else {}
+                )
+            else:
+                sample = adapter.sample_normalized(
+                    cluster.centroid[1], cluster.centroid[0]
+                )
+            result.append(predict_drift(cluster, sample))
+        return result
 
     def get_usvs(self) -> List[USV]:
         """Return USV fleet state from seed data."""
@@ -56,6 +92,7 @@ class CleanerService:
         self,
         clusters: List[DebrisCluster] | None = None,
         usvs: List[USV] | None = None,
+        environment: List[dict] | None = None,
     ) -> CleanupPlan:
         """
         Run the full clustering + greedy assignment pipeline.
@@ -63,10 +100,12 @@ class CleanerService:
         If clusters/usvs are not provided, loads from the hero scenario.
         """
         if clusters is None:
-            clusters = self.get_clusters()
+            clusters = self.get_clusters(environment)
         if usvs is None:
             usvs = self.get_usvs()
 
+        if environment is not None or any(not c.predicted_positions for c in clusters):
+            clusters = self.predict_clusters(clusters, environment)
         plan = greedy_assign(clusters, usvs)
         logger.info(
             "Cleanup optimized: %d assignments, %.1f kg estimated collection",

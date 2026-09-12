@@ -87,6 +87,7 @@ class GFWClient:
         headers = {
             "Authorization": f"Bearer {GFW_API_TOKEN}",
             "Accept": "application/json",
+            "User-Agent": "MARINEX/0.2",
         }
 
         for attempt in range(self._MAX_RETRIES + 1):
@@ -200,7 +201,8 @@ class GFWClient:
                 logger.info("GFW cache expired (age %.0fs); refreshing.", age_s)
 
         # Build request URL and body
-        url = f"{GFW_BASE_URL}/events"
+        # GFW v3 validates pagination on the query string even for POST.
+        url = f"{GFW_BASE_URL}/events?limit=100&offset=0"
         payload: Dict[str, Any] = {
             "datasets": ["public-global-fishing-events:latest"],
             "startDate": "2024-01-01",
@@ -225,6 +227,7 @@ class GFWClient:
             "Authorization": f"Bearer {GFW_API_TOKEN}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "MARINEX/0.2",
         }
 
         last_exc: Optional[Exception] = None

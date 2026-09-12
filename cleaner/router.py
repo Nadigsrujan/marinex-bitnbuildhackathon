@@ -1,4 +1,5 @@
 """CLEANER endpoints for clusters and deterministic mission optimization."""
+
 from __future__ import annotations
 
 from typing import List, Optional
@@ -22,6 +23,7 @@ class CleanupOptimizeRequest(BaseModel):
     scenario_id: str = "scenario_hero_01"
     clusters: Optional[List[DebrisCluster]] = None
     usvs: Optional[List[USV]] = None
+    environment: Optional[List[dict]] = None
 
 
 @router.get("/debris/clusters", response_model=List[DebrisCluster])
@@ -44,4 +46,6 @@ async def optimize_cleanup(
             status_code=404,
             detail=f"Scenario '{request.scenario_id}' not found.",
         )
-    return _service.optimize_cleanup(clusters=request.clusters, usvs=request.usvs)
+    return _service.optimize_cleanup(
+        clusters=request.clusters, usvs=request.usvs, environment=request.environment
+    )

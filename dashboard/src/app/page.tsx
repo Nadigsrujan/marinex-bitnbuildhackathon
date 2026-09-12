@@ -1,305 +1,543 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { ShieldAlert, Navigation, Trash2, Activity, Play, CheckCircle2 } from 'lucide-react';
-import { DEMO_DASHBOARD_STATE } from '@/lib/demo-state';
-import { fetchDashboardState, runSupervisorAnalysis, type DataSource } from '@/lib/api';
-import type { DashboardState } from '@/lib/types';
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { fetchDashboardState } from "@/lib/api";
+import { DEMO_DASHBOARD_STATE } from "@/lib/demo-state";
+import type { DashboardState, Provenance } from "@/lib/types";
+import styles from "./page.module.css";
 
-// Dynamically import map component to avoid SSR issues with Leaflet
-const MapComponent = dynamic(() => import('@/components/MapComponent'), { ssr: false });
+const MapComponent = dynamic(() => import("@/components/MapComponent"), {
+  ssr: false,
+  loading: () => <p>Loading maritime map…</p>,
+});
+const tabs = ["Route", "Environment", "Cleanup", "Agent trace"] as const;
+function value(n: number | null | undefined, digits = 2) {
+  return n == null || !Number.isFinite(n) ? "Unavailable" : n.toFixed(digits);
+}
+function Source({ provenance }: { provenance?: Provenance }) {
+  return (
+    <div className={styles.source}>
+      <strong>
+        {provenance?.source_mode?.toUpperCase() ?? "UNVERIFIED SOURCE"} ·{" "}
+        {provenance?.source_name ?? "Source unavailable"}
+      </strong>
+      <div>Observed / valid: {provenance?.observed_at ?? "Not recorded"}</div>
+      <div>
+        Retrieved: {provenance?.retrieved_at ?? "Not recorded"} ·{" "}
+        {provenance?.cached ? "Cached" : "Cache state unknown"}
+      </div>
+      <p>{provenance?.notes}</p>
+      {provenance?.source_url_or_id?.startsWith("https://") && (
+        <a href={provenance.source_url_or_id} target="_blank" rel="noreferrer">
+          Source reference ↗
+        </a>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [state, setState] = useState<DashboardState>(DEMO_DASHBOARD_STATE);
-  const [dataSource, setDataSource] = useState<DataSource>('offline-demo');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const [selected, setSelected] = useState("vessel_hero_01");
+  const [tab, setTab] = useState<(typeof tabs)[number]>("Route");
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [health, setHealth] = useState(false);
   useEffect(() => {
-    let cancelled = false;
-    void fetchDashboardState().then((result) => {
-      if (!cancelled) {
+    let active = true;
+    fetchDashboardState()
+      .then((result) => {
+        if (!active) return;
         setState(result.state);
-        setDataSource(result.source);
-      }
-    });
-    return () => { cancelled = true; };
+        setNotice(
+          result.source === "offline-demo"
+            ? "Backend unavailable · showing the bundled, computed Cycle A snapshot."
+            : null,
+        );
+      })
+      .catch((error) => {
+        if (active) setNotice(String(error));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const runAnalysis = async () => {
+  async function reload() {
     setLoading(true);
-    setError(null);
     try {
-      const result = await runSupervisorAnalysis();
+      const result = await fetchDashboardState();
       setState(result.state);
-      setDataSource(result.source);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to run analysis');
+      setNotice(
+        result.source === "offline-demo"
+          ? "Backend unavailable · showing the bundled, computed Cycle A snapshot."
+          : null,
+      );
+    } catch (error) {
+      setNotice(String(error));
     } finally {
       setLoading(false);
     }
-  };
-
-  const s = state;
-  const sentinel = s.sentinel;
-  const nav = s.navigator.route_result;
-  const cleaner = s.cleaner;
-  const supervisor = s.supervisor.last_decision;
-
+  }
+  const cases = [...state.sentinel.cases].sort(
+    (a, b) => b.risk_score - a.risk_score,
+  );
+  const vessel = cases.find((c) => c.vessel_id === selected) ?? cases[0];
+  const route = state.navigator.route_result;
+  const plan = state.cleaner.cleanup_plan;
+  const usvs = state.cleaner.usvs ?? [];
+  const metrics = route
+    ? ([
+        [
+          "Distance · km",
+          route.comparison.baseline_distance_km,
+          route.comparison.optimized_distance_km,
+        ],
+        [
+          "ETA proxy · h",
+          route.comparison.baseline_eta_hours,
+          route.comparison.optimized_eta_hours,
+        ],
+        [
+          "Fuel proxy · units",
+          route.comparison.baseline_fuel_proxy,
+          route.comparison.optimized_fuel_proxy,
+        ],
+        [
+          "Weather cost",
+          route.cost_decomposition?.baseline?.weather_cost,
+          route.cost_decomposition?.optimized?.weather_cost,
+        ],
+        [
+          "Security cost",
+          route.cost_decomposition?.baseline?.security_cost,
+          route.cost_decomposition?.optimized?.security_cost,
+        ],
+      ] as const)
+    : [];
   return (
-    <div className="container">
-      <header className="header">
-        <div className="brand">
-          <Activity className="text-blue-400" size={32} />
-          <h1>MARINEX</h1>
+    <main className={styles.shell}>
+      <header className={styles.header}>
+        <div>
+          <span className={styles.eyebrow}>
+            EASTERN TROPICAL PACIFIC / OPERATIONS
+          </span>
+          <h1>
+            MARINEX <span>Maritime intelligence</span>
+          </h1>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-slate-400">
-            {s.last_updated ? `Last updated: ${new Date(s.last_updated).toLocaleTimeString()}` : 'Ready'}
-          </div>
-          <div className={`badge ${dataSource === 'api' ? 'low' : 'medium'}`}>
-            {dataSource === 'api' ? 'LIVE API' : 'OFFLINE DEMO'}
-          </div>
-          <button 
-            onClick={runAnalysis} 
+        <div className={styles.actions}>
+          <span className={styles.badge}>
+            {state.data_mode === "connected"
+              ? "Connected · cache available"
+              : "Cached Demo"}
+          </span>
+          <button onClick={() => setHealth(!health)} aria-expanded={health}>
+            Source health
+          </button>
+          <button
+            className={styles.primary}
+            onClick={reload}
             disabled={loading}
-            className="run-btn"
           >
-            {loading ? <Activity className="animate-spin" size={20} /> : <Play size={20} />}
-            {loading ? 'Analyzing...' : 'Run Full Analysis'}
+            {loading ? "Loading scenario…" : "Load hero scenario ↗"}
           </button>
         </div>
       </header>
-
-      {error && (
-        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-lg mb-6">
-          {error}
+      {notice && (
+        <div role="status" className={styles.notice}>
+          {notice}
         </div>
       )}
-
-      <div className="dashboard-grid">
-        {/* Map Panel (Spans both columns) */}
-        <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="panel-header">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🗺️</span>
-              <h2 className="panel-title">Unified Scenario View</h2>
-            </div>
-          </div>
-          <div className="map-container">
-            <MapComponent state={state} />
-          </div>
-        </div>
-
-        {/* SENTINEL Panel */}
-        <div className="glass-card">
-          <div className="panel-header">
-            <ShieldAlert className="text-red-400" size={24} />
-            <h2 className="panel-title">SENTINEL (Risk Detection)</h2>
-          </div>
-          <div className="stat-grid">
-            <div className="stat-box">
-              <div className="stat-label">Vessels Assessed</div>
-              <div className="stat-value">{sentinel.cases?.length || 0}</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-label">Risk Zones Generated</div>
-              <div className="stat-value">{sentinel.risk_zones?.length || 0}</div>
-            </div>
-          </div>
-          {sentinel.cases?.[0] && (
-            <div className="mt-4 p-4 bg-black/40 rounded-lg border border-red-500/20 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-red-500 shadow-[0_0_10px_#ef4444]"></div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-lg">{sentinel.cases[0].name}</h3>
-                <span className={`badge ${sentinel.cases[0].risk_level.toLowerCase()} ${sentinel.cases[0].risk_level === 'CRITICAL' ? 'pulse-alert' : ''}`}>
-                  {sentinel.cases[0].risk_level}
-                </span>
+      {health && (
+        <section className={styles.health}>
+          {Object.entries(state.source_health ?? {}).map(([name, source]) => (
+            <article key={name}>
+              <strong>
+                {name.replaceAll("_", " ")}{" "}
+                <span className={styles.badge}>{source.status}</span>
+              </strong>
+              <p>{source.detail}</p>
+            </article>
+          ))}
+        </section>
+      )}
+      <section className={styles.kpis} aria-label="Scenario metrics">
+        {[
+          ["Vessels assessed", cases.length],
+          [
+            "High / critical",
+            cases.filter((c) => ["HIGH", "CRITICAL"].includes(c.risk_level))
+              .length,
+          ],
+          ["Fuel proxy delta", `${value(route?.comparison.fuel_delta_pct)}%`],
+          [
+            "Security cost delta",
+            `${value(route?.comparison.security_exposure_delta_pct)}%`,
+          ],
+          [
+            "Collection estimate · simulated",
+            `${value(plan?.estimated_collection_kg, 0)} kg`,
+          ],
+          [
+            "Idle simulated USVs",
+            usvs.filter((u) => u.status === "idle").length,
+          ],
+        ].map(([label, metric]) => (
+          <article key={label}>
+            <span>{label}</span>
+            <strong>{metric}</strong>
+          </article>
+        ))}
+      </section>
+      <section className={styles.workspace}>
+        <aside className={styles.rail}>
+          <div className={styles.sectionTitle}>01 / Investigation queue</div>
+          <p>Ranked decision-support signals</p>
+          {cases.map((c) => (
+            <button
+              key={c.vessel_id}
+              className={`${styles.case} ${c.vessel_id === vessel?.vessel_id ? styles.selected : ""}`}
+              onClick={() => setSelected(c.vessel_id)}
+            >
+              <div>
+                <strong>{c.name}</strong>
+                <b>{value(c.risk_score, 1)}</b>
               </div>
-              
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>Risk Score</span>
-                  <span className="text-red-400 font-bold">{sentinel.cases[0].risk_score}/100</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${sentinel.cases[0].risk_score}%` }}></div>
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-300 bg-slate-900/50 p-2 rounded border border-white/5">
-                {sentinel.cases[0].evidence.slice(0, 2).map((ev, i) => (
-                  <div key={i} className="mb-1 flex gap-2">
-                    <span className="text-red-400">▹</span>
-                    <span>{ev.explanation}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* NAVIGATOR Panel */}
-        <div className="glass-card">
-          <div className="panel-header">
-            <Navigation className="text-blue-400" size={24} />
-            <h2 className="panel-title">NAVIGATOR (Route Optimization)</h2>
+              <span>
+                {c.flag} · {c.risk_level} · {value(c.confidence * 100, 0)}%
+                confidence
+              </span>
+              <small>
+                {c.provenance?.source_mode?.toUpperCase() ?? "UNVERIFIED"} INPUT
+                · DERIVED SCORE
+              </small>
+            </button>
+          ))}
+          <p className={styles.disclaimer}>
+            Investigation priority is not proof of illegal activity.
+          </p>
+        </aside>
+        <section className={styles.mapPanel}>
+          <div className={styles.mapHeading}>
+            <strong>Shared maritime view</strong>
+            <span>Galápagos corridor · [lon, lat]</span>
           </div>
-          {nav ? (
+          <div className={styles.map}>
+            <MapComponent
+              state={state}
+              selectedCase={vessel?.vessel_id}
+              onSelectCase={setSelected}
+            />
+          </div>
+          <div className={styles.mapFoot}>
+            Dashed gray: baseline · Blue: optimized · Red: risk · Amber: debris
+            / drift · Green: simulated USV mission
+          </div>
+        </section>
+        <aside className={styles.evidence}>
+          <div className={styles.sectionTitle}>02 / Evidence & provenance</div>
+          {vessel ? (
             <>
-              <div className="stat-grid">
-                <div className="stat-box">
-                  <div className="stat-label">Baseline Distance</div>
-                  <div className="stat-value">{nav.comparison.baseline_distance_km} <span className="text-sm font-normal text-slate-400">km</span></div>
-                </div>
-                <div className="stat-box border-blue-500/30 bg-blue-500/5 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 blur-xl rounded-full"></div>
-                  <div className="stat-label text-blue-300">Optimized Distance</div>
-                  <div className="stat-value text-blue-400 glow-text-blue">
-                    {nav.comparison.optimized_distance_km} <span className="text-sm font-normal text-blue-300">km</span>
-                    <span className="text-xs text-slate-400 ml-2">({nav.comparison.distance_delta_pct > 0 ? '+' : ''}{nav.comparison.distance_delta_pct}%)</span>
+              <h2>{vessel.name}</h2>
+              <span className={styles.badge}>
+                {vessel.risk_level} · DERIVED
+              </span>
+              <p>
+                Protected-area relation:{" "}
+                <strong>
+                  {vessel.protected_area_relation ?? "Unavailable"}
+                </strong>
+              </p>
+              {vessel.evidence.map((e, i) => (
+                <div className={styles.contribution} key={`${e.feature}-${i}`}>
+                  <div>
+                    <span>{e.feature.replaceAll("_", " ")}</span>
+                    <b>+{value(e.points)}</b>
                   </div>
+                  <meter min={0} max={100} value={e.points} />
+                  <p>{e.explanation}</p>
+                  <small>
+                    Raw: {String(e.value)} · {e.source}
+                  </small>
                 </div>
-                <div className="stat-box">
-                  <div className="stat-label">Baseline ETA</div>
-                  <div className="stat-value">{nav.comparison.baseline_eta_hours} <span className="text-sm font-normal text-slate-400">h</span></div>
-                </div>
-                <div className="stat-box border-blue-500/30 bg-blue-500/5">
-                  <div className="stat-label text-blue-300">Optimized ETA</div>
-                  <div className="stat-value text-blue-400 glow-text-blue">
-                    {nav.comparison.optimized_eta_hours} <span className="text-sm font-normal text-blue-300">h</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-sm text-blue-200 flex items-center justify-between">
-                <span>Security Exposure:</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-red-400 line-through opacity-70">{nav.comparison.baseline_security_exposure}</span>
-                  <span>→</span>
-                  <span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_#34d399]">{nav.comparison.optimized_security_exposure}</span>
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="text-slate-500 italic mt-4">Run analysis to compute routes.</div>
-          )}
-        </div>
-
-        {/* CLEANER Panel */}
-        <div className="glass-card">
-          <div className="panel-header">
-            <Trash2 className="text-emerald-400" size={24} />
-            <h2 className="panel-title">CLEANER (Debris Response)</h2>
-          </div>
-          {cleaner.cleanup_plan ? (
-            <>
-              <div className="stat-grid">
-                <div className="stat-box">
-                  <div className="stat-label">Clusters Found</div>
-                  <div className="stat-value">{cleaner.clusters?.length || 0}</div>
-                </div>
-                <div className="stat-box border-emerald-500/30 bg-emerald-500/5">
-                  <div className="stat-label text-emerald-300">USV Assignments</div>
-                  <div className="stat-value text-emerald-400 glow-text-green">{cleaner.cleanup_plan.assignments?.length || 0}</div>
-                </div>
-                <div className="stat-box border-emerald-500/30 bg-emerald-500/5">
-                  <div className="stat-label text-emerald-300">Est. Collection</div>
-                  <div className="stat-value text-emerald-400 glow-text-green">{cleaner.cleanup_plan.estimated_collection_kg} <span className="text-sm font-normal text-emerald-300">kg</span></div>
-                </div>
-                <div className="stat-box">
-                  <div className="stat-label">Completion Time</div>
-                  <div className="stat-value">{cleaner.cleanup_plan.completion_time_hours} <span className="text-sm font-normal text-slate-400">h</span></div>
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>Fleet Capacity Utilization</span>
-                  <span className="text-emerald-400 font-bold">{(cleaner.cleanup_plan.capacity_utilization * 100).toFixed(1)}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2 mb-4">
-                  <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(100, cleaner.cleanup_plan.capacity_utilization * 100)}%` }}></div>
-                </div>
-                
-                {cleaner.cleanup_plan.assignments && cleaner.cleanup_plan.assignments.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2">Assignments & Alternatives</div>
-                    {cleaner.cleanup_plan.assignments.map((assignment: unknown, idx: number) => {
-                      const asgn = assignment as {
-                        usv_id: string;
-                        cluster_id: string;
-                        mission_score: number;
-                        travel_distance_km: number;
-                        alternatives?: Array<{ selected: boolean; rejection_reasons?: string[]; usv_id: string }>;
-                      };
-                      const rejectedAlt = asgn.alternatives?.find((a) => !a.selected && a.rejection_reasons && a.rejection_reasons.length > 0);
-                      
-                      return (
-                        <div key={idx} className="bg-black/40 border border-emerald-500/20 p-3 rounded-lg text-sm">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-semibold text-emerald-300">{asgn.usv_id} → {asgn.cluster_id}</span>
-                            <span className="badge medium glow-text-green text-xs">SELECTED</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 mb-2">
-                            <div>Score: <span className="text-slate-200">{asgn.mission_score?.toFixed(2) || 'N/A'}</span></div>
-                            <div>Dist: <span className="text-slate-200">{asgn.travel_distance_km} km</span></div>
-                          </div>
-                          {rejectedAlt && (
-                            <div className="mt-2 pt-2 border-t border-white/5 text-xs">
-                              <span className="text-slate-500">Rejected alternative: </span>
-                              <span className="text-slate-400">{rejectedAlt.usv_id} </span>
-                              <span className="text-red-400/80">({rejectedAlt.rejection_reasons?.[0]})</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+              ))}
+              <h3>Event timeline</h3>
+              <ol className={styles.timeline}>
+                {vessel.gap_start && (
+                  <li>
+                    <time>{vessel.gap_start}</time>AIS gap begins
+                  </li>
                 )}
-              </div>
-            </>
-          ) : (
-            <div className="text-slate-500 italic mt-4">Run analysis to plan cleanup missions.</div>
-          )}
-        </div>
-
-        {/* SUPERVISOR Panel */}
-        <div className="glass-card">
-          <div className="panel-header">
-            <CheckCircle2 className="text-cyan-400" size={24} />
-            <h2 className="panel-title">SUPERVISOR (Orchestration)</h2>
-          </div>
-          {supervisor ? (
-            <>
-              <div className="mb-4">
-                <div className="text-sm font-semibold mb-2 text-slate-300 uppercase tracking-wider">Recommendation</div>
-                <div className="text-sm text-cyan-100 bg-cyan-900/20 p-3 rounded-lg border border-cyan-500/30 shadow-[inset_0_0_15px_rgba(6,182,212,0.1)]">
-                  {supervisor.recommendation}
-                </div>
-              </div>
-              
-              <div className="text-sm font-semibold mb-2 text-slate-300 uppercase tracking-wider flex justify-between">
-                <span>Execution Trace</span>
-                <span className="text-cyan-400 font-normal">{(supervisor.confidence * 100).toFixed(0)}% Confidence</span>
-              </div>
-              <div className="trace-list">
-                {supervisor.trace.map((step) => (
-                  <div key={step.step} className="trace-item border border-white/5 hover:border-cyan-500/30 hover:bg-cyan-900/10 transition-colors">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="trace-agent drop-shadow-[0_0_5px_#06b6d4]">{step.agent}</div>
-                      <div className="text-xs text-slate-500">{step.duration_ms}ms</div>
-                    </div>
-                    <div className="text-slate-300 font-mono text-xs opacity-80">{step.tool}</div>
-                  </div>
+                {vessel.gap_end && (
+                  <li>
+                    <time>{vessel.gap_end}</time>AIS gap ends ·{" "}
+                    {vessel.gap_hours} h
+                  </li>
+                )}
+                {vessel.event_time && (
+                  <li>
+                    <time>{vessel.event_time}</time>Case event
+                  </li>
+                )}
+                {vessel.event_timeline?.map((event, i) => (
+                  <li key={i}>
+                    <time>{event.timestamp}</time>
+                    {event.type}
+                  </li>
                 ))}
-              </div>
+              </ol>
+              {(vessel.fishing_signal || vessel.loitering_signal) && (
+                <p>
+                  Supporting flags:{" "}
+                  {[
+                    vessel.fishing_signal && "apparent fishing",
+                    vessel.loitering_signal && "loitering",
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                  . Separate event times not supplied.
+                </p>
+              )}
+              <Source provenance={vessel.provenance} />
             </>
           ) : (
-            <div className="text-slate-500 italic mt-4">Awaiting execution trace...</div>
+            <p>No cases available.</p>
           )}
-        </div>
-      </div>
-    </div>
+        </aside>
+      </section>
+      <section className={styles.details}>
+        <nav className={styles.tabs} aria-label="Domain panels">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              aria-pressed={tab === t}
+              className={tab === t ? styles.activeTab : ""}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+        {tab === "Route" && (
+          <div className={styles.routePanel}>
+            <div>
+              <h2>
+                Baseline → MARINEX <span className={styles.badge}>DERIVED</span>
+              </h2>
+              <p>{route?.reroute_reason ?? "No reroute reason supplied."}</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Baseline</th>
+                    <th>Optimized</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.map(([label, baseline, optimized]) => (
+                    <tr key={label}>
+                      <th>{label}</th>
+                      <td>{value(baseline)}</td>
+                      <td>{value(optimized)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <aside>
+              <h3>Decision context</h3>
+              <p>
+                Security exposure:{" "}
+                {route?.comparison.baseline_security_exposure} →{" "}
+                {route?.comparison.optimized_security_exposure}
+              </p>
+              <p>
+                Weighted objective: <strong>{value(route?.total_cost)}</strong>
+              </p>
+              <p>
+                Environmental quality: {route?.data_quality_status ?? "Unknown"}
+              </p>
+              <p className={styles.disclaimer}>
+                Backend route metrics are displayed as supplied. Baseline
+                weather is currently a neutral model; ETA is a speed-based
+                proxy. Fuel is uncalibrated. Prototype routes are not
+                navigational control.
+              </p>
+            </aside>
+          </div>
+        )}
+        {tab === "Environment" && (
+          <>
+            <h2>Shared current & marine forecast</h2>
+            <p>
+              Routing and CLEANER use the same normalized marine cache.
+              Single-site values are extrapolated across the corridor; markers
+              are sample locations, not independent observations.
+            </p>
+            <div className={styles.sampleGrid}>
+              {state.environment?.samples.map((sample, i) => (
+                <article key={i}>
+                  <h3>
+                    {value(sample.lon, 3)}, {value(sample.lat, 3)}
+                  </h3>
+                  <span className={styles.badge}>
+                    {sample.provenance?.source_mode?.toUpperCase() ??
+                      "UNVERIFIED"}
+                  </span>
+                  <dl>
+                    <dt>Current</dt>
+                    <dd>
+                      {value(sample.current_speed_ms)} m/s ·{" "}
+                      {value(sample.current_direction_deg, 0)}°
+                    </dd>
+                    <dt>Wave</dt>
+                    <dd>
+                      {value(sample.wave_height_m)} m ·{" "}
+                      {value(sample.wave_period_s)} s ·{" "}
+                      {value(sample.wave_direction_deg, 0)}°
+                    </dd>
+                    <dt>SST</dt>
+                    <dd>{value(sample.sst_c, 1)} °C</dd>
+                  </dl>
+                  <Source provenance={sample.provenance} />
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+        {tab === "Cleanup" && (
+          <>
+            <div className={styles.cleanupHeader}>
+              <h2>
+                Predictive interception{" "}
+                <span className={styles.badge}>DERIVED / SIMULATED INPUTS</span>
+              </h2>
+              <p>
+                {value(plan?.total_distance_km)} km round trip ·{" "}
+                {value(plan?.completion_time_hours)} h completion proxy ·{" "}
+                {value((plan?.capacity_utilization ?? 0) * 100, 1)}% fleet
+                capacity
+              </p>
+            </div>
+            <div className={styles.sampleGrid}>
+              {state.cleaner.clusters.map((cluster) => (
+                <article key={cluster.cluster_id}>
+                  <h3>
+                    {cluster.cluster_id} · {value(cluster.estimated_mass_kg, 0)}{" "}
+                    kg
+                  </h3>
+                  <p>
+                    Current centroid:{" "}
+                    {cluster.centroid.map((n) => value(n, 4)).join(", ")}
+                  </p>
+                  <ol className={styles.timeline}>
+                    {cluster.predicted_positions?.map((p) => (
+                      <li key={p.horizon_hours}>
+                        <strong>+{p.horizon_hours}h · DERIVED</strong>
+                        <span>
+                          {p.position.map((n) => value(n, 5)).join(", ")}
+                        </span>
+                        <small>
+                          {p.valid_time ?? "Valid time unavailable"}
+                        </small>
+                      </li>
+                    ))}
+                  </ol>
+                  <Source provenance={cluster.provenance} />
+                </article>
+              ))}
+            </div>
+            <div className={styles.sampleGrid}>
+              {usvs.map((usv) => (
+                <article key={usv.usv_id}>
+                  <h3>
+                    {usv.usv_id} <span className={styles.badge}>SIMULATED</span>
+                  </h3>
+                  <p>
+                    {usv.status} · {usv.remaining_range_km} km range ·{" "}
+                    {usv.speed_kn ?? 5} kn
+                  </p>
+                  <label>
+                    Battery · {usv.battery_pct}%
+                    <meter value={usv.battery_pct} min={0} max={100} />
+                  </label>
+                  <p>Capacity: {usv.capacity_kg} kg</p>
+                  {plan?.assignments
+                    .filter((a) => a.usv_id === usv.usv_id)
+                    .map((a, i) => (
+                      <div key={i}>
+                        <strong>Assigned → {String(a.cluster_id)}</strong>
+                        <p>
+                          Intercept +{value(Number(a.intercept_hours))}h ·
+                          mission {value(Number(a.travel_distance_km))} km ·
+                          range margin {value(Number(a.range_margin_km))} km
+                        </p>
+                        <label>
+                          Collection / capacity
+                          <meter
+                            min={0}
+                            max={usv.capacity_kg}
+                            value={Number(a.estimated_collection_kg)}
+                          />
+                        </label>
+                        <p>
+                          Best feasible mission score:{" "}
+                          {value(Number(a.mission_score), 4)}
+                        </p>
+                      </div>
+                    ))}
+                </article>
+              ))}
+            </div>
+            <details open>
+              <summary>
+                Rejected alternatives ({plan?.rejected_assignments?.length ?? 0}
+                )
+              </summary>
+              <ul>
+                {plan?.rejected_assignments?.map((a, i) => (
+                  <li key={i}>
+                    {a.cluster_id} / {a.usv_id}:{" "}
+                    {a.rejection_reasons.join("; ").replaceAll("_", " ")}
+                  </li>
+                ))}
+              </ul>
+            </details>
+            <Source provenance={plan?.provenance} />
+            <Source provenance={state.cleaner.context} />
+          </>
+        )}
+        {tab === "Agent trace" && (
+          <>
+            <h2>Tool execution</h2>
+            {state.supervisor.last_decision ? (
+              <>
+                <p>{state.supervisor.last_decision.recommendation}</p>
+                <ol>
+                  {state.supervisor.last_decision.trace.map((step) => (
+                    <li key={step.step}>
+                      {step.agent} · {step.tool} · {step.duration_ms} ms
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <p>
+                Cycle A loads deterministic domain outputs. The coordinated
+                Supervisor event trace and replay are scheduled for Cycle B.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+      <footer className={styles.footer}>
+        MARINEX / Cycle A · Forecast-driven simulation · Source limitations
+        remain visible
+      </footer>
+    </main>
   );
 }

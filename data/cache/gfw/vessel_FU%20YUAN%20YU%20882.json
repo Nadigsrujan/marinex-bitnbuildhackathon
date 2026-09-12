@@ -1,0 +1,145 @@
+{
+  "first_entry": {
+    "dataset": "public-global-vessel-identity:v4.0",
+    "registryInfoTotalRecords": 0,
+    "registryInfo": [],
+    "registryOwners": [],
+    "combinedSourcesInfo": [
+      {
+        "vesselId": "851bf4d7d-df4d-93d5-a3be-06f887102065",
+        "geartypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2013,
+            "yearTo": 2014
+          }
+        ],
+        "shiptypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2013,
+            "yearTo": 2014
+          }
+        ]
+      },
+      {
+        "vesselId": "50e330be3-3d6e-2d07-f9ff-9015eea8415a",
+        "geartypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2013,
+            "yearTo": 2014
+          },
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2017,
+            "yearTo": 2025
+          },
+          {
+            "name": "NA",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2015,
+            "yearTo": 2016
+          }
+        ],
+        "shiptypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2013,
+            "yearTo": 2014
+          },
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2017,
+            "yearTo": 2025
+          },
+          {
+            "name": "NA",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2015,
+            "yearTo": 2016
+          }
+        ]
+      },
+      {
+        "vesselId": "eb99d28ec-c8dd-af07-79ab-c9d00ec3ba83",
+        "geartypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2021,
+            "yearTo": 2023
+          }
+        ],
+        "shiptypes": [
+          {
+            "name": "FISHING",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2021,
+            "yearTo": 2023
+          }
+        ]
+      }
+    ],
+    "selfReportedInfo": [
+      {
+        "id": "50e330be3-3d6e-2d07-f9ff-9015eea8415a",
+        "ssvid": "412440282",
+        "shipname": "FU YUAN YU 805",
+        "nShipname": "FUYUANYU805",
+        "flag": "CHN",
+        "callsign": null,
+        "imo": null,
+        "messagesCounter": 214714,
+        "positionsCounter": 44509,
+        "sourceCode": [
+          "AIS"
+        ],
+        "matchFields": "SEVERAL_FIELDS",
+        "transmissionDateFrom": "2013-09-06T03:35:02Z",
+        "transmissionDateTo": "2025-12-23T05:24:11Z"
+      },
+      {
+        "id": "eb99d28ec-c8dd-af07-79ab-c9d00ec3ba83",
+        "ssvid": "412440282",
+        "shipname": "FU YUAN YU805",
+        "nShipname": "FUYUANYU805",
+        "flag": "CHN",
+        "callsign": "FU YUAN",
+        "imo": null,
+        "messagesCounter": 3133,
+        "positionsCounter": 1415,
+        "sourceCode": [
+          "AIS"
+        ],
+        "matchFields": "SEVERAL_FIELDS",
+        "transmissionDateFrom": "2021-07-15T12:01:51Z",
+        "transmissionDateTo": "2023-04-13T10:25:26Z"
+      },
+      {
+        "id": "851bf4d7d-df4d-93d5-a3be-06f887102065",
+        "ssvid": "412440282",
+        "shipname": "FUYUANYU805)",
+        "nShipname": "FUYUANYU805",
+        "flag": "CHN",
+        "callsign": "805",
+        "imo": null,
+        "messagesCounter": 515,
+        "positionsCounter": 337,
+        "sourceCode": [
+          "AIS"
+        ],
+        "matchFields": "SEVERAL_FIELDS",
+        "transmissionDateFrom": "2013-06-24T06:37:59Z",
+        "transmissionDateTo": "2014-09-10T00:26:26Z"
+      }
+    ]
+  },
+  "total": 253
+}

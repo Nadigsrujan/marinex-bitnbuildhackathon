@@ -434,3 +434,37 @@ npm run dev
 ## Next member should do
 - Member 1: Begin Cycle 3 by hardening the SENTINEL logic and locking the final hero risk layer for the demo.
 
+---
+
+# Cycle A completion — Members 3 and 4
+
+## CLEANER
+- Added constant-current +2/+6/+12-hour debris drift predictions using NAVIGATOR's normalized marine samples.
+- Missions now intercept a moving debris target and enforce status, battery, capacity, round-trip range, and a 12-hour forecast horizon.
+- Cleanup results expose intercept points, rejected pairings, feasibility details, provenance, and deterministic metrics.
+- Hero result: 3 assignments, 227.40 km total round trip, 2775 kg simulated collection, 95.69% fleet-capacity utilization, and 10.56-hour completion proxy.
+
+## Frontend and integration
+- Added a complete fresh-load scenario endpoint at `GET /api/demo/scenario/scenario_hero_01` and a generated same-contract offline snapshot.
+- Rebuilt the single dashboard around KPI, ranked cases, evidence/provenance, route, environment, cleanup, source-health, and trace areas.
+- Added selectable map layers for cases, risk/protected areas, both routes, currents, wave/SST context, debris observations and drift, simulated USVs, and interception missions.
+- The map remains usable without online tiles. Source truth and known lineage limits are visible in the UI.
+
+## Live-data refresh on 2026-09-12
+- Global Fishing Watch authentication succeeded after adding a required client user agent. A live vessel-identity v4 response was cached without the bearer token. The exact synthetic hero name did not resolve reliably, and the Events API rejected the documented `latest` dataset alias as deprecated; hero cases remain explicitly simulated/unverified.
+- Open-Meteo Marine refreshed successfully: 168 forecast hours cached with retrieval time `2026-09-12T16:14:09Z`. NAVIGATOR and CLEANER consume this same cache.
+- The official Copernicus Marine 2.4.1 client reached the authentication service, but the supplied login was rejected with HTTP 400. The labeled offline baseline remains active.
+- Credentials are loaded from ignored backend `.env`; no secret appears in committed cache or frontend output.
+
+## Verification
+- PASS: canonical data validation, including evidence-score traceability.
+- PASS: 94 backend tests.
+- PASS: dashboard ESLint, TypeScript, and production build.
+- PASS: browser desktop interaction and responsive 390 px layout without horizontal overflow.
+- PASS: offline hero run with network connections blocked.
+
+## Cycle B blockers
+- Replace the synthetic hero vessel with a verified GFW identity/event bundle once a supported Events dataset ID is available.
+- Replace the demo protected-area polygon with verified official geometry lineage.
+- Resolve Copernicus account authentication if a live Copernicus subset is required; Open-Meteo already supplies the working shared forecast.
+
