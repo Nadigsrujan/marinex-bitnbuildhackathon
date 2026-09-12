@@ -385,3 +385,52 @@ cd dashboard && npm run build
 - PASS: live browser flow against the API
 - PASS: browser fallback with the API deliberately unavailable
 
+---
+
+# HANDOFF — Hour 8 / Member 4
+
+## What changed
+- Transitioned the entire dashboard from Cycle 1 mocks to live API integrations with `USE_DEMO_DATA` fallback.
+- Created `supervisor/state.py` (SharedState) to store the canonical outputs from SENTINEL, NAVIGATOR, and CLEANER in a single digital twin memory structure.
+- Built the `SUPERVISOR` orchestrator (`supervisor/service.py`) which deterministically loads the scenario, triggers the domain engines in sequence, and generates a structured public trace of tool executions.
+- Registered the `/api/supervisor/run`, `/api/state`, and `/api/health` endpoints and wired them directly to the "Run Full Analysis" button in the Next.js UI.
+- Wired the latest CLEANER updates into the dashboard to visually display the selected USV missions alongside explicit reasons for rejected alternatives (e.g., insufficient battery/capacity).
+- Fixed Next.js build errors (TypeScript types) ensuring 0 lint warnings.
+- Upgraded the map to use the beautiful OFFLINE-ready dark theme OpenStreetMap tiles.
+
+## Files created/modified
+- `supervisor/state.py`
+- `supervisor/service.py`
+- `supervisor/router.py`
+- `apps/api/main.py`
+- `dashboard/src/app/page.tsx`
+- `dashboard/src/components/MapComponent.tsx`
+- `HANDOFF.md`
+
+## Exact run/test commands
+```bash
+# Run backend tests
+py -3.12 -m pytest tests/ -v
+
+# Start the API server
+py -3.12 -m uvicorn apps.api.main:app --port 8000
+
+# Start the Next.js dashboard
+cd dashboard
+npm run dev
+```
+
+## Sample request/response or UI path
+1. Navigate to `http://localhost:3000`
+2. Click "Run Full Analysis"
+3. The dashboard executes `POST /api/supervisor/run`, fetches the combined output via `GET /api/state`, and dynamically updates all panels, the map, and the trace.
+
+## Acceptance gate result
+- PASS: One-click run executes the full orchestrator.
+- PASS: All three domain outputs (Risk Zones, Optimized Route, Debris Cleanup) are returned and visualized.
+- PASS: Application gracefully falls back to offline/demo mode without crashing.
+- PASS: CLEANER alternatives and rejection reasons are successfully parsed and displayed.
+
+## Next member should do
+- Member 1: Begin Cycle 3 by hardening the SENTINEL logic and locking the final hero risk layer for the demo.
+

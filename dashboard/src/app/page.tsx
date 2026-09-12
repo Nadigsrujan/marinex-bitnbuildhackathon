@@ -218,9 +218,45 @@ export default function Dashboard() {
                   <span>Fleet Capacity Utilization</span>
                   <span className="text-emerald-400 font-bold">{(cleaner.cleanup_plan.capacity_utilization * 100).toFixed(1)}%</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2">
+                <div className="w-full bg-slate-800 rounded-full h-2 mb-4">
                   <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(100, cleaner.cleanup_plan.capacity_utilization * 100)}%` }}></div>
                 </div>
+                
+                {cleaner.cleanup_plan.assignments && cleaner.cleanup_plan.assignments.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2">Assignments & Alternatives</div>
+                    {cleaner.cleanup_plan.assignments.map((assignment: unknown, idx: number) => {
+                      const asgn = assignment as {
+                        usv_id: string;
+                        cluster_id: string;
+                        mission_score: number;
+                        travel_distance_km: number;
+                        alternatives?: Array<{ selected: boolean; rejection_reasons?: string[]; usv_id: string }>;
+                      };
+                      const rejectedAlt = asgn.alternatives?.find((a) => !a.selected && a.rejection_reasons && a.rejection_reasons.length > 0);
+                      
+                      return (
+                        <div key={idx} className="bg-black/40 border border-emerald-500/20 p-3 rounded-lg text-sm">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-semibold text-emerald-300">{asgn.usv_id} → {asgn.cluster_id}</span>
+                            <span className="badge medium glow-text-green text-xs">SELECTED</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 mb-2">
+                            <div>Score: <span className="text-slate-200">{asgn.mission_score?.toFixed(2) || 'N/A'}</span></div>
+                            <div>Dist: <span className="text-slate-200">{asgn.travel_distance_km} km</span></div>
+                          </div>
+                          {rejectedAlt && (
+                            <div className="mt-2 pt-2 border-t border-white/5 text-xs">
+                              <span className="text-slate-500">Rejected alternative: </span>
+                              <span className="text-slate-400">{rejectedAlt.usv_id} </span>
+                              <span className="text-red-400/80">({rejectedAlt.rejection_reasons[0]})</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           ) : (

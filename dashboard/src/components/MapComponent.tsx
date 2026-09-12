@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleMarker, MapContainer, Polygon, Polyline, Popup } from 'react-leaflet';
+import { CircleMarker, MapContainer, Polygon, Polyline, Popup, TileLayer } from 'react-leaflet';
 import type { DashboardState, VesselGeometry } from '@/lib/types';
 
 interface MapProps {
@@ -24,6 +24,11 @@ export default function MapComponent({ state }: MapProps) {
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       <MapContainer center={[-0.5, -90.5]} zoom={6} scrollWheelZoom style={{ height: '100%', width: '100%', zIndex: 0 }}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          className="dark-tiles"
+        />
         {state.sentinel.risk_zones.map((zone, index) => (
           <Polygon
             key={`risk-zone-${index}`}
