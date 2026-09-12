@@ -1,0 +1,94 @@
+{
+  "first_entry": {
+    "dataset": "public-global-vessel-identity:v4.0",
+    "registryInfoTotalRecords": 1,
+    "registryInfo": [
+      {
+        "id": "f4fcaa55644cd99a74ee405aa0893795",
+        "sourceCode": [
+          "IMO"
+        ],
+        "ssvid": "412331000",
+        "flag": "CHN",
+        "shipname": "CHANGSHANDAO",
+        "nShipname": "CHANGSHANDAO",
+        "callsign": "BPXC",
+        "imo": "9520297",
+        "latestVesselInfo": true,
+        "transmissionDateFrom": "2012-06-10T07:15:02Z",
+        "transmissionDateTo": "2026-07-31T19:52:46Z",
+        "geartypes": [
+          "CARGO",
+          "PASSENGER"
+        ],
+        "lengthM": null,
+        "tonnageGt": 24572,
+        "vesselInfoReference": "7f12b63c38759703d0f0774ae5928184",
+        "extraFields": []
+      }
+    ],
+    "registryOwners": [],
+    "combinedSourcesInfo": [
+      {
+        "vesselId": "97400ee6b-bde0-5f47-5101-791473dc7173",
+        "geartypes": [
+          {
+            "name": "PASSENGER",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2012,
+            "yearTo": 2026
+          }
+        ],
+        "shiptypes": [
+          {
+            "name": "PASSENGER",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2012,
+            "yearTo": 2026
+          }
+        ]
+      }
+    ],
+    "selfReportedInfo": [
+      {
+        "id": "97400ee6b-bde0-5f47-5101-791473dc7173",
+        "ssvid": "412331000",
+        "shipname": "CHANG SHAN DAO",
+        "nShipname": "CHANGSHANDAO",
+        "flag": "CHN",
+        "callsign": "BPXC",
+        "imo": "9520297",
+        "messagesCounter": 6330852,
+        "positionsCounter": 1996958,
+        "sourceCode": [
+          "AIS"
+        ],
+        "matchFields": "SEVERAL_FIELDS",
+        "transmissionDateFrom": "2012-03-26T06:21:25Z",
+        "transmissionDateTo": "2026-09-10T23:58:11Z"
+      }
+    ],
+    "id": "f4fcaa55644cd99a74ee405aa0893795",
+    "sourceCode": [
+      "IMO"
+    ],
+    "ssvid": "412331000",
+    "flag": "CHN",
+    "shipname": "CHANGSHANDAO",
+    "nShipname": "CHANGSHANDAO",
+    "callsign": "BPXC",
+    "imo": "9520297",
+    "latestVesselInfo": true,
+    "transmissionDateFrom": "2012-06-10T07:15:02Z",
+    "transmissionDateTo": "2026-07-31T19:52:46Z",
+    "geartypes": [
+      "CARGO",
+      "PASSENGER"
+    ],
+    "lengthM": null,
+    "tonnageGt": 24572,
+    "vesselInfoReference": "7f12b63c38759703d0f0774ae5928184",
+    "extraFields": []
+  },
+  "total": 2
+}

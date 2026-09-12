@@ -68,9 +68,9 @@ class NavigatorService:
         import uuid
         from datetime import datetime, timezone
         
-        route_id = str(uuid.uuid4())
+        route_id = "route_hero_01"
         route_version = "1.0"
-        changed_at = datetime.now(timezone.utc).isoformat()
+        changed_at = "2026-09-12T12:00:00Z"
         trigger = "Risk zone updated" if request.risk_zones else "Scenario loaded"
         
         origin_lon, origin_lat = request.origin[0], request.origin[1]

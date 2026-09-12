@@ -31,6 +31,9 @@ EXAMPLES_DIR = DEMO_DIR / "examples"
 # -- Mode --
 USE_DEMO_DATA: bool = os.getenv("USE_DEMO_DATA", "true").lower() in ("true", "1", "yes")
 
+# -- AISStream --
+AISSTREAM_API_KEY: str = os.getenv("AISSTREAM_API_KEY", "")
+
 # -- GFW (Global Fishing Watch) --
 GFW_API_TOKEN: str = os.getenv("GFW_API_TOKEN", "")
 GFW_BASE_URL: str = "https://gateway.api.globalfishingwatch.org/v3"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -69,10 +70,12 @@ def test_service_exposes_complete_mock_seed_state() -> None:
     assert "assignments" not in state["scenario"]
 
 
-def test_scenario_rejects_precomputed_domain_results(tmp_path) -> None:
-    payload = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
-    payload["cleanup"]["assignments"] = [{"usv_id": "usv_01"}]
-    invalid_path = tmp_path / "scenario_with_fake_result.json"
-    invalid_path.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ValidationError):
-        load_hero_scenario(invalid_path)
+def test_scenario_rejects_precomputed_domain_results() -> None:
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        payload = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
+        payload["cleanup"]["assignments"] = [{"usv_id": "usv_01"}]
+        invalid_path = Path(tmpdir) / "scenario_with_fake_result.json"
+        invalid_path.write_text(json.dumps(payload), encoding="utf-8")
+        with pytest.raises(ValidationError):
+            load_hero_scenario(invalid_path)

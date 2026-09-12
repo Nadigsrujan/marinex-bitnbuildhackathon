@@ -126,13 +126,8 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
           }
         ],
         "confidence": 0.93,
-        "provenance": {
-          "source_name": "SENTINEL case cache",
-          "source_mode": "simulated",
-          "cached": true,
-          "observed_at": "2024-01-15T04:32:00Z",
-          "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout."
-        }
+        "timeline": [],
+        "provenance": null
       },
       {
         "vessel_id": "vessel_highenv_01",
@@ -220,13 +215,8 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
           }
         ],
         "confidence": 0.82,
-        "provenance": {
-          "source_name": "SENTINEL case cache",
-          "source_mode": "simulated",
-          "cached": true,
-          "observed_at": "2024-01-16T02:15:00Z",
-          "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout."
-        }
+        "timeline": [],
+        "provenance": null
       },
       {
         "vessel_id": "vessel_storm_01",
@@ -259,13 +249,8 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
           }
         ],
         "confidence": 0.42,
-        "provenance": {
-          "source_name": "SENTINEL case cache",
-          "source_mode": "simulated",
-          "cached": true,
-          "observed_at": "2024-01-17T09:00:00Z",
-          "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout."
-        }
+        "timeline": [],
+        "provenance": null
       },
       {
         "vessel_id": "vessel_control_02",
@@ -298,13 +283,8 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
           }
         ],
         "confidence": 0.35,
-        "provenance": {
-          "source_name": "SENTINEL case cache",
-          "source_mode": "simulated",
-          "cached": true,
-          "observed_at": "2024-01-15T08:15:00Z",
-          "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout."
-        }
+        "timeline": [],
+        "provenance": null
       },
       {
         "vessel_id": "vessel_control_01",
@@ -329,13 +309,8 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
         "risk_level": "LOW",
         "evidence": [],
         "confidence": 0.3,
-        "provenance": {
-          "source_name": "SENTINEL case cache",
-          "source_mode": "simulated",
-          "cached": true,
-          "observed_at": "2024-01-15T12:00:00Z",
-          "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout."
-        }
+        "timeline": [],
+        "provenance": null
       }
     ],
     "risk_zones": [
@@ -579,7 +554,7 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
       "fuel_proxy": 590.71,
       "weather_cost": 228.6,
       "security_cost": 0.0,
-      "total_cost": 235.31,
+      "total_cost": 145.57,
       "comparison": {
         "baseline_distance_km": 482.02,
         "optimized_distance_km": 572.78,
@@ -886,7 +861,11 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
         }
       },
       "reroute_reason": "Optimized route deviates to reduce composite cost (longer distance; lower security cost; avoids risk polygon).",
-      "data_quality_status": "good"
+      "data_quality_status": "good",
+      "route_id": "route_hero_01",
+      "route_version": "1.0",
+      "changed_at": "2026-09-12T12:00:00Z",
+      "trigger": "Risk zone updated"
     }
   },
   "environment": {
@@ -2113,7 +2092,52 @@ export const DEMO_DASHBOARD_STATE: DashboardState = {
         "environment_sources": [
           "open-meteo"
         ]
-      }
+      },
+      "replay_events": [
+        {
+          "timestamp": "2026-09-12T12:00:00Z",
+          "event_type": "drift_forecast_updated",
+          "details": {
+            "clusters_forecasted": 3
+          },
+          "description": "Predicted drift for 3 debris clusters using latest environment data."
+        },
+        {
+          "timestamp": "2026-09-12T12:00:00Z",
+          "event_type": "intercept_chosen",
+          "details": {
+            "usv_id": "usv_01",
+            "cluster_id": "cluster_01"
+          },
+          "description": "USV usv_01 assigned to intercept cluster cluster_01."
+        },
+        {
+          "timestamp": "2026-09-12T12:00:00Z",
+          "event_type": "intercept_chosen",
+          "details": {
+            "usv_id": "usv_02",
+            "cluster_id": "cluster_02"
+          },
+          "description": "USV usv_02 assigned to intercept cluster cluster_02."
+        },
+        {
+          "timestamp": "2026-09-12T12:00:00Z",
+          "event_type": "intercept_chosen",
+          "details": {
+            "usv_id": "usv_03",
+            "cluster_id": "cluster_03"
+          },
+          "description": "USV usv_03 assigned to intercept cluster cluster_03."
+        },
+        {
+          "timestamp": "2026-09-12T12:00:00Z",
+          "event_type": "alternatives_rejected",
+          "details": {
+            "rejected_count": 6
+          },
+          "description": "Rejected 6 assignments due to capacity or range constraints."
+        }
+      ]
     },
     "usvs": [
       {

@@ -421,18 +421,21 @@ def test_adapter_uses_cached_when_sources_unavailable():
     assert norm.get("current_u_ms") is not None
 
 
-def test_adapter_fallback_after_missing_files(monkeypatch, tmp_path):
+def test_adapter_fallback_after_missing_files(monkeypatch):
     """If all source files are missing, adapter should fall back to neutral values without crash."""
+    import tempfile
+    from pathlib import Path
     from navigator.environment_adapter import EnvironmentAdapter
-    # Point to non-existent paths
-    adapter = EnvironmentAdapter(
-        open_meteo_path=tmp_path / "none.json",
-        copernicus_path=tmp_path / "none.json",
-        legacy_path=tmp_path / "none.json",
-    )
-    norm = adapter.sample_normalized(0.0, -90.0)
-    assert norm.get("data_quality") in ("missing", "unknown")
-    assert norm.get("wave_height_m") == 0.0
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Point to non-existent paths
+        adapter = EnvironmentAdapter(
+            open_meteo_path=Path(tmpdir) / "none.json",
+            copernicus_path=Path(tmpdir) / "none.json",
+            legacy_path=Path(tmpdir) / "none.json",
+        )
+        norm = adapter.sample_normalized(0.0, -90.0)
+        assert norm.get("data_quality") in ("missing", "unknown")
+        assert norm.get("wave_height_m") == 0.0
 
 
 # ---------------------------------------------------------------------------

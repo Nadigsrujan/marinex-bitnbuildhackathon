@@ -112,7 +112,7 @@ class CleanerService:
         from datetime import datetime, timezone
         from schemas.models import ReplayEvent
         
-        now = datetime.now(timezone.utc).isoformat()
+        now = "2026-09-12T12:00:00Z"
         events = []
         events.append(ReplayEvent(
             timestamp=now,

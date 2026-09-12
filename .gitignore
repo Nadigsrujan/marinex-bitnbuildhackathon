@@ -2,10 +2,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.pytest_tmp/
 .env
+.env.local
 venv/
 env/
 .DS_Store
 plan.md
 *.log
 implementation_plan.md
+dashboard/.next/
+dashboard/node_modules/
