@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "source": "curated_demo",
+  "source_detail": "Simulated USV fleet state for deterministic offline mission planning.",
+  "coordinate_order": "[longitude, latitude]",
+  "usvs": [
+    {"usv_id": "usv_01", "location": [-89.8, -0.3], "capacity_kg": 500.0, "battery_pct": 95.0, "remaining_range_km": 120.0, "status": "idle"},
+    {"usv_id": "usv_02", "location": [-91.7, -1.9], "capacity_kg": 350.0, "battery_pct": 82.0, "remaining_range_km": 95.0, "status": "idle"},
+    {"usv_id": "usv_03", "location": [-88.6, 1.1], "capacity_kg": 250.0, "battery_pct": 68.0, "remaining_range_km": 80.0, "status": "idle"}
+  ]
+}

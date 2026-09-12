@@ -149,3 +149,61 @@ curl -X POST http://127.0.0.1:8000/api/route/optimize \
 - ✅ Route endpoint at `POST /api/route/optimize`
 - ✅ Risk-zone rerouting demonstrated
 - **M3 Action**: Use same hero region, import `DebrisCluster`/`USV`/`CleanupPlan` schemas, create `cleaner/` module
+
+---
+
+# HANDOFF — Hour H03 / Member 3
+
+## What changed
+- Added the `cleaner/` package boundaries for loading, preliminary grouping,
+  later assignment work, service access, and the future API router.
+- Added 24 explicitly labeled `curated_demo` debris seed observations and 3
+  simulated USVs in Member 2's Galapagos hero corridor.
+- Added `data/demo/scenario_hero.json` with stable vessel, route, debris, and
+  USV references. It contains inputs only and no hard-coded domain results.
+- Added offline reference validation and deterministic preliminary grouping
+  that produces canonical `cluster_01` through `cluster_03` mock objects.
+
+## Files created/modified
+- `cleaner/`
+- `data/demo/debris_points.json`
+- `data/demo/usvs.json`
+- `data/demo/scenario_hero.json`
+- `tests/cleaner/`
+- `HANDOFF.md`
+
+## Exact run/test commands
+```bash
+python -m cleaner.data_loader
+python -m pytest tests/cleaner/ -q
+python -m pytest tests/ -q
+```
+
+## Sample request/response or UI path
+```python
+from cleaner.service import CleanerService
+
+seed_state = CleanerService().load_seed_state()
+# 24 debris_points, 3 usvs, 3 preliminary_clusters, scenario_hero_01
+```
+
+## Acceptance gate result
+- PASS: hero scenario and all referenced files load without network access.
+- PASS: all 24 debris points, 3 USVs, and 3 preliminary clusters validate.
+- PASS: vessel and route inputs match the existing Member 1/2 fixtures.
+- PASS: the scenario contains no route, assignment, or cleanup result fields.
+
+## Known issue
+- Preliminary grouping is intentionally simple; Hour 7 owns final clustering,
+  feasibility, assignment metrics, and the public CLEANER endpoints.
+
+## Do NOT change
+- `scenario_hero_01`, `vessel_hero_01`, `route_hero_01`
+- `cluster_01` through `cluster_03`; `usv_01` through `usv_03`
+- Coordinate order `[longitude, latitude]`
+- Debris source label `curated_demo`
+
+## Next member should do
+- Member 4 should render the Cycle 1 mock slice from
+  `CleanerService.load_seed_state()` or the referenced JSON files without
+  implementing CLEANER algorithms in frontend/integration code.
