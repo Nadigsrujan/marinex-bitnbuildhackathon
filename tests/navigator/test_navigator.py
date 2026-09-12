@@ -143,7 +143,20 @@ def test_baseline_determinism(graph):
 def test_invalid_coordinates_handling(graph):
     """Out-of-bounds coordinates should return None, not crash."""
     result = baseline_dijkstra(graph, 180.0, 90.0, -180.0, -90.0)
-    assert result is None or isinstance(result, tuple)
+    assert result is None
+
+
+def test_api_rejects_coordinates_outside_supported_corridor():
+    """The HTTP contract must reject, rather than snap, invalid endpoints."""
+    from fastapi.testclient import TestClient
+    from apps.api.main import app
+
+    response = TestClient(app).post(
+        "/api/route/optimize",
+        json={"origin": [180.0, 90.0], "destination": [-180.0, -90.0]},
+    )
+    assert response.status_code == 422
+    assert "supported demo corridor" in response.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +292,41 @@ def test_comparison_delta_consistency(service):
             f"distance_delta_pct mismatch: got {comp['distance_delta_pct']}, "
             f"expected ~{expected_pct}"
         )
+
+
+def test_total_cost_uses_configured_objective_weights(service):
+    """Public total_cost must equal the weighted optimizer objective."""
+    weights = {"w_fuel": 0.35, "w_time": 0.25, "w_weather": 0.1, "w_security": 0.3}
+    request = RouteRequest(
+        origin=[ORIGIN_LON, ORIGIN_LAT],
+        destination=[DEST_LON, DEST_LAT],
+        objective_weights=weights,
+        risk_zones=[HERO_RISK_POLYGON],
+    )
+    result = service.compute_route(request)
+    expected = (
+        weights["w_fuel"] * result.fuel_proxy
+        + weights["w_time"] * result.comparison["objective_time_cost_hours"]
+        + weights["w_weather"] * result.weather_cost
+        + weights["w_security"] * result.security_cost
+    )
+    assert result.total_cost == pytest.approx(expected, abs=0.02)
+
+
+def test_security_labels_are_derived_from_route_exposure(service):
+    """Security labels and delta must reflect measured polygon intersections."""
+    result = service.compute_route(RouteRequest(
+        origin=[ORIGIN_LON, ORIGIN_LAT],
+        destination=[DEST_LON, DEST_LAT],
+        objective_weights={"w_fuel": 0.1, "w_time": 0.1, "w_weather": 0.0, "w_security": 0.8},
+        risk_zones=[HERO_RISK_POLYGON],
+    ))
+    comparison = result.comparison
+    assert comparison["baseline_security_cost"] > 0
+    assert comparison["optimized_security_cost"] == 0
+    assert comparison["baseline_security_exposure"] == "HIGH"
+    assert comparison["optimized_security_exposure"] == "ZERO"
+    assert comparison["security_exposure_delta_pct"] == -100.0
 
 
 # ---------------------------------------------------------------------------

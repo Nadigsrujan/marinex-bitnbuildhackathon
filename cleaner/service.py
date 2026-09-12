@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from cleaner.assignment import greedy_assign
-from cleaner.clustering import build_preliminary_clusters
+from cleaner.clustering import cluster_debris_points
 from cleaner.data_loader import (
     load_debris_points,
     load_hero_scenario,
@@ -29,7 +29,7 @@ class CleanerService:
         validate_scenario_references(scenario)
         points = load_debris_points()
         usvs = load_usvs()
-        clusters = build_preliminary_clusters(
+        clusters = cluster_debris_points(
             points, scenario.cleanup.cluster_distance_km
         )
         return {
@@ -43,7 +43,8 @@ class CleanerService:
         """Return debris clusters from the hero scenario seed data."""
         scenario = load_hero_scenario()
         points = load_debris_points()
-        return build_preliminary_clusters(
+        validate_scenario_references(scenario)
+        return cluster_debris_points(
             points, scenario.cleanup.cluster_distance_km
         )
 

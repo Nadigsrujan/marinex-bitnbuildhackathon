@@ -253,3 +253,135 @@ npm run dev
 - PASS: Next.js dashboard correctly visualises the shared state.
 - PASS: All 28 tests passing.
 
+---
+
+# HANDOFF — Hour H07 / Member 3
+
+## Prior-slot verification
+- Hour 4 PARTIAL/FAIL: the dashboard production build passes and the live
+  supervisor button renders all domain results, but `npm run lint` reports 12
+  errors. Canonical TypeScript contracts, a typed API client, `USE_DEMO_DATA`
+  fallback, USV markers, and a network-independent map/font/icon path are still
+  missing. The current page falls back to empty panels when the backend fails.
+- Hour 5 PARTIAL/PASS: cached SENTINEL data, scoring, risk geometry, endpoints,
+  traceability validation, and focused tests run offline. The API list shape is
+  wrapped instead of the documented `VesselCase[]`, and several tests do not
+  isolate configuration cleanly.
+- Hour 6 PARTIAL/PASS: weighted routing, local environment input, risk polygon
+  penalties, route changes, and the route endpoint work offline. However,
+  `RouteResult.total_cost` is currently an unweighted component sum rather than
+  the optimizer's weighted objective, and security-exposure labels/deltas are
+  inferred from risk-zone presence rather than measured baseline exposure.
+- These findings remain for their owning members; no SENTINEL, NAVIGATOR,
+  SUPERVISOR, or dashboard files were changed in Hour 7.
+
+## What changed
+- Replaced partial-collection logic with deterministic distance clustering and
+  one round-trip mission per USV.
+- Added hotspot priority scoring from impact, urgency, and density.
+- Added per-pair mission scoring with travel and capacity penalties.
+- Added explicit status, battery, round-trip range, and capacity feasibility.
+- Added visible candidate alternatives and rejection reasons to each selected
+  assignment.
+- Corrected route sequences and metrics so distance includes outbound and
+  return legs and completion time is derived from the longest round trip.
+- Tuned simulated USV capacity/range inputs so all three hero clusters have one
+  explainable feasible assignment while rejected alternatives remain visible.
+- Updated CLEANER endpoints to return canonical cluster arrays and accept an
+  optional scenario/clusters/USVs request body.
+
+## Files created/modified
+- `cleaner/assignment.py`
+- `cleaner/clustering.py`
+- `cleaner/service.py`
+- `cleaner/router.py`
+- `data/demo/usvs.json`
+- `tests/cleaner/test_planner.py`
+- `HANDOFF.md`
+
+## Exact run/test commands
+```bash
+python -m cleaner.data_loader
+python -m pytest tests/cleaner/ -q
+python -m pytest tests/ -q
+python -m uvicorn apps.api.main:app --port 8000
+```
+
+## Sample requests
+```bash
+curl http://127.0.0.1:8000/api/debris/clusters
+curl -X POST http://127.0.0.1:8000/api/cleanup/optimize \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_id":"scenario_hero_01"}'
+```
+
+## Acceptance gate result
+- PASS: 3 canonical clusters and 3 valid simulated USVs.
+- PASS: selected missions are feasible; rejected alternatives include explicit
+  battery/range/capacity/status reasons where applicable.
+- PASS: five repeated hero runs return identical plans.
+- PASS: GET/POST endpoints work offline and validate canonical responses.
+- PASS: 13 CLEANER tests and 54 total backend tests pass.
+
+## Actual hero cleanup metrics
+- Assignments: `cluster_01 -> usv_01`, `cluster_02 -> usv_02`,
+  `cluster_03 -> usv_03`
+- Total round-trip distance: `231.47 km`
+- Estimated collection: `2775.0 kg`
+- Fleet capacity utilization: `0.9569` (`95.69%`)
+- Completion-time proxy: `10.97 hours` at the documented 5-knot USV proxy
+
+## Known issues
+- Member 4 must update frontend types/API parsing for the canonical
+  `GET /api/debris/clusters -> DebrisCluster[]` response.
+- The unresolved Hour 4–6 verification findings above remain with their owners.
+
+## Do NOT change
+- Stable IDs `scenario_hero_01`, `cluster_01` through `cluster_03`, and
+  `usv_01` through `usv_03`
+- Coordinate order `[longitude, latitude]`
+- Debris provenance label `curated_demo`
+- Assignment `alternatives[].rejection_reasons` and score-contribution fields
+
+## Next member should do
+- Member 4 should wire the canonical CLEANER endpoints into shared state and
+  display the selected mission plus at least one rejected alternative reason.
+
+---
+
+# Post-Hour-7 corrective verification — Hours 4–6
+
+The previously documented Hour 4–6 findings were corrected after explicit
+user authorization to work across those owners' files.
+
+## Corrections completed
+- Dashboard now uses canonical TypeScript contracts, a configurable API client,
+  and a visibly labelled bundled demo fallback.
+- Removed remote font, map-tile, and marker-image requirements; the local map
+  renders risk zones, both routes, debris clusters, USV bases, and cleanup
+  routes on an offline ocean canvas.
+- Frontend ESLint and production TypeScript build both pass.
+- NAVIGATOR returns the optimizer's weighted objective as `total_cost`.
+- Security exposure labels and percentage delta are calculated from measured
+  intersections on the baseline and optimized routes.
+- Out-of-corridor coordinates return `422` at the endpoint and are no longer
+  silently snapped onto the graph.
+- `GET /api/cases` now returns the documented canonical `VesselCase[]`.
+- Weak SENTINEL/NAVIGATOR tests were replaced with exact assertions, and GFW
+  fallback/cache tests now isolate the live-client inputs and network boundary.
+
+## Verification
+```bash
+python scripts/validate_demo_data.py
+python -m pytest tests -q
+cd dashboard && npm run lint
+cd dashboard && npm run build
+```
+
+- PASS: canonical demo-data validation
+- PASS: 57 backend tests
+- PASS: frontend lint with zero errors/warnings
+- PASS: production build and TypeScript check
+- PASS: live browser flow against the API
+- PASS: browser fallback with the API deliberately unavailable
+

@@ -140,7 +140,9 @@ class OceanGraph:
         return self._edges
 
     def nearest_node(self, lon: float, lat: float) -> Optional[NodeId]:
-        """Find the nearest water node to a coordinate."""
+        """Find the nearest water node to an in-corridor coordinate."""
+        if not self.contains_coordinate(lon, lat):
+            return None
         best: Optional[NodeId] = None
         best_dist = float("inf")
         for node_id, (n_lon, n_lat) in self._nodes.items():
@@ -149,6 +151,15 @@ class OceanGraph:
                 best_dist = d
                 best = node_id
         return best
+
+    def contains_coordinate(self, lon: float, lat: float) -> bool:
+        """Return whether a finite coordinate is inside the supported corridor."""
+        return (
+            math.isfinite(lon)
+            and math.isfinite(lat)
+            and self._bbox["lon_min"] <= lon <= self._bbox["lon_max"]
+            and self._bbox["lat_min"] <= lat <= self._bbox["lat_max"]
+        )
 
     def get_coord(self, node_id: NodeId) -> Optional[Coord]:
         """Return the (lon, lat) for a node."""

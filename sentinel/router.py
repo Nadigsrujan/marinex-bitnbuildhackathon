@@ -8,17 +8,17 @@ Exposes SENTINEL risk assessment endpoints:
 """
 from fastapi import APIRouter, HTTPException
 
+from schemas.models import VesselCase
 from sentinel.service import SentinelService
 
 router = APIRouter()
 _service = SentinelService()
 
 
-@router.get("/cases")
+@router.get("/cases", response_model=list[VesselCase])
 async def list_cases():
     """Return all vessel cases ranked by risk score descending."""
-    cases = _service.get_all_cases()
-    return {"count": len(cases), "cases": [c.model_dump() for c in cases]}
+    return _service.get_all_cases()
 
 
 @router.get("/cases/{vessel_id}")

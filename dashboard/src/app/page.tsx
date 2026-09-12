@@ -3,54 +3,49 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { ShieldAlert, Navigation, Trash2, Activity, Play, CheckCircle2 } from 'lucide-react';
+import { DEMO_DASHBOARD_STATE } from '@/lib/demo-state';
+import { fetchDashboardState, runSupervisorAnalysis, type DataSource } from '@/lib/api';
+import type { DashboardState } from '@/lib/types';
 
 // Dynamically import map component to avoid SSR issues with Leaflet
 const MapComponent = dynamic(() => import('@/components/MapComponent'), { ssr: false });
 
 export default function Dashboard() {
-  const [state, setState] = useState<any>(null);
+  const [state, setState] = useState<DashboardState>(DEMO_DASHBOARD_STATE);
+  const [dataSource, setDataSource] = useState<DataSource>('offline-demo');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchState = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/state');
-      if (res.ok) {
-        const data = await res.json();
-        setState(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch state:', err);
-    }
-  };
-
   useEffect(() => {
-    fetchState();
+    let cancelled = false;
+    void fetchDashboardState().then((result) => {
+      if (!cancelled) {
+        setState(result.state);
+        setDataSource(result.source);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   const runAnalysis = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8000/api/supervisor/run', {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        throw new Error(`API error: ${res.statusText}`);
-      }
-      await fetchState();
-    } catch (err: any) {
-      setError(err.message || 'Failed to run analysis');
+      const result = await runSupervisorAnalysis();
+      setState(result.state);
+      setDataSource(result.source);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to run analysis');
     } finally {
       setLoading(false);
     }
   };
 
-  const s = state || {};
-  const sentinel = s.sentinel || {};
-  const nav = s.navigator?.route_result || {};
-  const cleaner = s.cleaner || {};
-  const supervisor = s.supervisor?.last_decision || {};
+  const s = state;
+  const sentinel = s.sentinel;
+  const nav = s.navigator.route_result;
+  const cleaner = s.cleaner;
+  const supervisor = s.supervisor.last_decision;
 
   return (
     <div className="container">
@@ -62,6 +57,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <div className="text-sm text-slate-400">
             {s.last_updated ? `Last updated: ${new Date(s.last_updated).toLocaleTimeString()}` : 'Ready'}
+          </div>
+          <div className={`badge ${dataSource === 'api' ? 'low' : 'medium'}`}>
+            {dataSource === 'api' ? 'LIVE API' : 'OFFLINE DEMO'}
           </div>
           <button 
             onClick={runAnalysis} 
@@ -131,7 +129,7 @@ export default function Dashboard() {
               </div>
 
               <div className="text-xs text-slate-300 bg-slate-900/50 p-2 rounded border border-white/5">
-                {sentinel.cases[0].evidence?.slice(0, 2).map((ev: any, i: number) => (
+                {sentinel.cases[0].evidence.slice(0, 2).map((ev, i) => (
                   <div key={i} className="mb-1 flex gap-2">
                     <span className="text-red-400">▹</span>
                     <span>{ev.explanation}</span>
@@ -148,7 +146,7 @@ export default function Dashboard() {
             <Navigation className="text-blue-400" size={24} />
             <h2 className="panel-title">NAVIGATOR (Route Optimization)</h2>
           </div>
-          {nav.comparison ? (
+          {nav ? (
             <>
               <div className="stat-grid">
                 <div className="stat-box">
@@ -236,7 +234,7 @@ export default function Dashboard() {
             <CheckCircle2 className="text-cyan-400" size={24} />
             <h2 className="panel-title">SUPERVISOR (Orchestration)</h2>
           </div>
-          {supervisor.trace ? (
+          {supervisor ? (
             <>
               <div className="mb-4">
                 <div className="text-sm font-semibold mb-2 text-slate-300 uppercase tracking-wider">Recommendation</div>
@@ -250,8 +248,8 @@ export default function Dashboard() {
                 <span className="text-cyan-400 font-normal">{(supervisor.confidence * 100).toFixed(0)}% Confidence</span>
               </div>
               <div className="trace-list">
-                {supervisor.trace.map((step: any, idx: number) => (
-                  <div key={idx} className="trace-item border border-white/5 hover:border-cyan-500/30 hover:bg-cyan-900/10 transition-colors">
+                {supervisor.trace.map((step) => (
+                  <div key={step.step} className="trace-item border border-white/5 hover:border-cyan-500/30 hover:bg-cyan-900/10 transition-colors">
                     <div className="flex justify-between items-start mb-1">
                       <div className="trace-agent drop-shadow-[0_0_5px_#06b6d4]">{step.agent}</div>
                       <div className="text-xs text-slate-500">{step.duration_ms}ms</div>

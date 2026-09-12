@@ -1,4 +1,4 @@
-"""Deterministic preliminary debris grouping for the Cycle 1 mock slice."""
+"""Deterministic distance-based clustering for CLEANER debris seeds."""
 from __future__ import annotations
 
 import math
@@ -26,8 +26,10 @@ def haversine_km(first: List[float], second: List[float]) -> float:
 def group_debris_points(
     points: List[DebrisPoint], max_neighbor_distance_km: float
 ) -> List[List[DebrisPoint]]:
-    """Group connected nearby points; input ordering cannot change the result."""
+    """Return connected distance groups independent of input ordering."""
 
+    if max_neighbor_distance_km <= 0:
+        raise ValueError("max_neighbor_distance_km must be positive")
     ordered = sorted(points, key=lambda point: point.point_id)
     unvisited = {point.point_id: point for point in ordered}
     groups: List[List[DebrisPoint]] = []
@@ -52,10 +54,10 @@ def group_debris_points(
     return groups
 
 
-def build_preliminary_clusters(
+def cluster_debris_points(
     points: List[DebrisPoint], max_neighbor_distance_km: float
 ) -> List[DebrisCluster]:
-    """Create canonical mock clusters for Member 4; Hour 7 owns final clustering."""
+    """Build canonical clusters with mass, density, impact, and urgency."""
 
     groups = group_debris_points(points, max_neighbor_distance_km)
     clusters: List[DebrisCluster] = []
@@ -65,6 +67,12 @@ def build_preliminary_clusters(
             round(sum(point.location[1] for point in group) / len(group), 5),
         ]
         total_mass = sum(point.estimated_mass_kg for point in group)
+        radius_km = max(
+            (haversine_km(point.location, centroid) for point in group),
+            default=1.0,
+        )
+        area_km2 = math.pi * max(radius_km, 1.0) ** 2
+        density_kg_km2 = total_mass / area_km2
         weighted_impact = sum(
             point.impact_score * point.estimated_mass_kg for point in group
         ) / total_mass
@@ -73,7 +81,7 @@ def build_preliminary_clusters(
                 cluster_id=f"cluster_{index:02d}",
                 centroid=centroid,
                 estimated_mass_kg=round(total_mass, 2),
-                density=float(len(group)),
+                density=round(density_kg_km2, 4),
                 impact_score=round(weighted_impact, 2),
                 urgency=round(max(point.urgency for point in group), 3),
                 source="curated_demo",
@@ -81,3 +89,11 @@ def build_preliminary_clusters(
             )
         )
     return clusters
+
+
+def build_preliminary_clusters(
+    points: List[DebrisPoint], max_neighbor_distance_km: float
+) -> List[DebrisCluster]:
+    """Backward-compatible Cycle 1 name for the completed clustering engine."""
+
+    return cluster_debris_points(points, max_neighbor_distance_km)

@@ -15,6 +15,7 @@ from schemas.models import RouteRequest, RouteResult
 from navigator.graph import OceanGraph
 from navigator.environment import OceanEnvironment
 from navigator.router_engine import baseline_dijkstra, optimized_astar
+from navigator.cost import compute_edge_cost
 from core.logging import get_logger
 
 logger = get_logger("navigator.service")
@@ -86,6 +87,7 @@ class NavigatorService:
             opt_poly = baseline_poly
             opt_dist = baseline_dist
             opt_breakdown = {"fuel_cost": baseline_fuel, "time_cost": baseline_eta, "weather_cost": 0.0, "security_cost": 0.0}
+            opt_total_cost = self._weighted_total(opt_breakdown, request.objective_weights)
             mode = "baseline_only"
         else:
             opt_poly, opt_total_cost, opt_breakdown = opt_result
@@ -95,9 +97,10 @@ class NavigatorService:
 
         opt_eta = opt_dist / max(request.vessel_speed_kn * 1.852, 0.01)
         opt_fuel = opt_breakdown.get("fuel_cost", opt_dist * request.fuel_rate_proxy)
+        opt_time_cost = opt_breakdown.get("time_cost", opt_eta)
         opt_weather = opt_breakdown.get("weather_cost", 0.0)
         opt_security = opt_breakdown.get("security_cost", 0.0)
-        opt_total = opt_fuel + opt_eta + opt_weather + opt_security
+        opt_total = opt_total_cost
 
         # -- Comparison deltas --
         def pct_delta(baseline_val: float, opt_val: float) -> float:
@@ -105,9 +108,25 @@ class NavigatorService:
                 return 0.0
             return round((opt_val - baseline_val) / baseline_val * 100, 2)
 
-        # Determine security exposure
-        baseline_security_exposure = "HIGH" if request.risk_zones else "NONE"
-        opt_security_exposure = "ZERO" if opt_security == 0.0 else "REDUCED"
+        # Determine security exposure from measured route/polygon intersections.
+        baseline_security_cost = self._route_security_cost(
+            baseline_poly, request.risk_zones
+        )
+        if not request.risk_zones:
+            baseline_security_exposure = "NONE"
+            opt_security_exposure = "NONE"
+        else:
+            baseline_security_exposure = (
+                "HIGH" if baseline_security_cost > 0.0 else "ZERO"
+            )
+            if opt_security == 0.0:
+                opt_security_exposure = "ZERO"
+            elif baseline_security_cost > 0.0 and opt_security < baseline_security_cost:
+                opt_security_exposure = "REDUCED"
+            else:
+                opt_security_exposure = "HIGH"
+
+        security_delta = pct_delta(baseline_security_cost, opt_security)
 
         comparison = {
             "baseline_distance_km": round(baseline_dist, 2),
@@ -121,7 +140,10 @@ class NavigatorService:
             "fuel_delta_pct": pct_delta(baseline_fuel, opt_fuel),
             "baseline_security_exposure": baseline_security_exposure,
             "optimized_security_exposure": opt_security_exposure,
-            "security_exposure_delta_pct": -100.0 if opt_security == 0.0 and request.risk_zones else 0.0,
+            "security_exposure_delta_pct": security_delta,
+            "baseline_security_cost": round(baseline_security_cost, 2),
+            "optimized_security_cost": round(opt_security, 2),
+            "objective_time_cost_hours": round(opt_time_cost, 4),
             "mode": mode,
         }
 
@@ -136,6 +158,46 @@ class NavigatorService:
             total_cost=round(opt_total, 2),
             comparison=comparison,
         )
+
+    def supports_request(self, request: RouteRequest) -> bool:
+        """Return whether both request endpoints lie in the supported corridor."""
+        return (
+            len(request.origin) == 2
+            and len(request.destination) == 2
+            and self._graph.contains_coordinate(request.origin[0], request.origin[1])
+            and self._graph.contains_coordinate(request.destination[0], request.destination[1])
+        )
+
+    @staticmethod
+    def _weighted_total(
+        breakdown: Dict[str, float], weights: Dict[str, float]
+    ) -> float:
+        """Reconstruct the configured objective from its unweighted components."""
+        return round(
+            weights.get("w_fuel", 0.4) * breakdown.get("fuel_cost", 0.0)
+            + weights.get("w_time", 0.3) * breakdown.get("time_cost", 0.0)
+            + weights.get("w_weather", 0.1) * breakdown.get("weather_cost", 0.0)
+            + weights.get("w_security", 0.2) * breakdown.get("security_cost", 0.0),
+            4,
+        )
+
+    @staticmethod
+    def _route_security_cost(
+        polyline: List[List[float]], risk_zones: List[Dict[str, Any]]
+    ) -> float:
+        """Measure raw security exposure along a route."""
+        from navigator.graph import _haversine_km
+
+        total = 0.0
+        for start, end in zip(polyline, polyline[1:]):
+            distance = _haversine_km(start[0], start[1], end[0], end[1])
+            _, breakdown = compute_edge_cost(
+                start[0], start[1], end[0], end[1],
+                distance_km=distance,
+                risk_zones=risk_zones,
+            )
+            total += breakdown["security_cost"]
+        return round(total, 4)
 
     def _polyline_distance(self, polyline: List[List[float]]) -> float:
         """Compute total great-circle distance along a polyline."""

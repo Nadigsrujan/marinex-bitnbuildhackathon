@@ -92,8 +92,8 @@ def test_no_gap_control(scorer):
     assert len(evidence) == 0
 
 
-def test_long_gap_high_risk(scorer):
-    """An 18-hour AIS gap should score significantly."""
+def test_long_gap_scores_gap_signal(scorer):
+    """An 18-hour AIS gap contributes its exact configured points."""
     risk_score, risk_level, evidence, confidence = scorer.score(
         gap_hours=18.0,
         fishing_signal=False,
@@ -102,8 +102,8 @@ def test_long_gap_high_risk(scorer):
         protected_area_distance_km=200.0,
         repeat_count=0,
     )
-    assert risk_score > 20.0
-    assert risk_level in ("LOW", "MEDIUM")
+    assert risk_score == 22.5
+    assert risk_level == "LOW"
     assert len(evidence) == 1
     assert evidence[0].feature == "ais_gap_hours"
 
@@ -165,46 +165,45 @@ def test_gfw_demo_returns_list(gfw_demo):
     assert len(events) > 0
 
 
-def test_gfw_live_fallback_on_bad_url():
+def test_gfw_live_fallback_on_bad_url(monkeypatch):
     """Live GFW client with bad token/URL must fallback to demo data, not raise."""
-    import os
-    os.environ["GFW_API_TOKEN"] = "bad-token-for-test"
+    import sentinel.gfw_client as gfw_module
+
+    monkeypatch.setattr(gfw_module, "GFW_BASE_URL", "http://127.0.0.1:19999")
+    monkeypatch.setattr(gfw_module, "GFW_API_TOKEN", "bad-token-for-test")
     client = GFWClient(use_demo=False)
-    # Force a bad URL to simulate network failure quickly
+    assert client.use_demo is False
     client._MAX_RETRIES = 0
-    original_url = __import__("core.config", fromlist=["GFW_BASE_URL"]).GFW_BASE_URL
-    import core.config as cfg
-    original = cfg.GFW_BASE_URL
-    cfg.GFW_BASE_URL = "http://127.0.0.1:19999"  # port with nothing listening
-    try:
-        # Should NOT raise -- falls back to demo
-        result = client._call_api()
-        assert isinstance(result, list), "Fallback must return a list"
-    finally:
-        cfg.GFW_BASE_URL = original
-        os.environ.pop("GFW_API_TOKEN", None)
+    result = client._call_api()
+    assert isinstance(result, list), "Fallback must return a list"
+    assert result, "Fallback must return the bundled demo cases"
 
 
-def test_gfw_ttl_cache_hit():
+def test_gfw_ttl_cache_hit(monkeypatch):
     """Second call with same params inside TTL should return cached data."""
     import time
+    import sentinel.gfw_client as gfw_module
+
+    monkeypatch.setattr(gfw_module, "GFW_API_TOKEN", "cache-test-token")
     client = GFWClient(use_demo=False)
+    assert client.use_demo is False
     client._MAX_RETRIES = 0
-    # Populate cache manually
-    key = "gfw_test_cache_hit"
     data = [{"vessel_id": "test", "name": "Test"}]
-    client._MEM_CACHE[key] = (time.time(), data)
-    # Build the matching key as _call_api would
     cache_key = "gfw_None_None"
     client._MEM_CACHE[cache_key] = (time.time(), data)
-    # Fetch -- TTL is fresh so should return cached
-    import core.config as cfg
-    cfg.GFW_BASE_URL = "http://127.0.0.1:19999"
-    client.use_demo = False
-    result = client._call_api()
-    assert result == data, "Should return cached data on TTL hit"
-    # Cleanup
-    client._MEM_CACHE.pop(cache_key, None)
+    network_called = False
+
+    def fail_if_called(*args, **kwargs):
+        nonlocal network_called
+        network_called = True
+        raise AssertionError("A fresh cache hit must not access the network")
+
+    monkeypatch.setattr("urllib.request.urlopen", fail_if_called)
+    try:
+        assert client._call_api() == data
+        assert network_called is False
+    finally:
+        client._MEM_CACHE.pop(cache_key, None)
 
 
 # ---------------------------------------------------------------------------
@@ -268,15 +267,14 @@ def api_client():
 
 
 def test_api_list_cases_200(api_client):
-    """GET /api/cases returns 200 with count and sorted cases."""
+    """GET /api/cases returns the canonical sorted VesselCase list."""
     resp = api_client.get("/api/cases")
     assert resp.status_code == 200
     body = resp.json()
-    assert "count" in body
-    assert "cases" in body
-    assert body["count"] == len(body["cases"])
+    assert isinstance(body, list)
+    assert body
     # Sorted descending by risk_score
-    scores = [c["risk_score"] for c in body["cases"]]
+    scores = [case["risk_score"] for case in body]
     assert scores == sorted(scores, reverse=True), "Cases not sorted by risk_score desc"
 
 
@@ -284,7 +282,7 @@ def test_api_get_hero_matches_list(api_client):
     """GET /api/cases/vessel_hero_01 returns the same dict as in the list."""
     list_resp = api_client.get("/api/cases")
     hero_in_list = next(
-        (c for c in list_resp.json()["cases"] if c["vessel_id"] == "vessel_hero_01"),
+        (case for case in list_resp.json() if case["vessel_id"] == "vessel_hero_01"),
         None,
     )
     assert hero_in_list is not None
