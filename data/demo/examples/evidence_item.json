@@ -1,0 +1,7 @@
+{
+  "feature": "ais_gap_hours",
+  "value": 18.5,
+  "points": 23.13,
+  "source": "GFW Events API v3",
+  "explanation": "AIS transponder was silent for 18.5 hours — contributes 23.13 risk points."
+}

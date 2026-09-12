@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "source": "Copernicus Marine Service — Global Ocean Physics (demo/cache)",
+  "product": "GLOBAL_ANALYSISFORECAST_PHY_001_024",
+  "variable": "sea_water_velocity",
+  "depth_m": 0.0,
+  "time": "2024-01-15T00:00:00Z",
+  "units": {
+    "u": "m/s (eastward)",
+    "v": "m/s (northward)"
+  },
+  "notes": "Curated snapshot for the Galapagos/Eastern Tropical Pacific demo corridor. Values approximate real Humboldt and Equatorial Countercurrent patterns.",
+  "grid": [
+    {"lon": -93.0, "lat": -3.0, "u": 0.15, "v": 0.30},
+    {"lon": -93.0, "lat": -1.5, "u": 0.12, "v": 0.25},
+    {"lon": -93.0, "lat": 0.0,  "u": 0.10, "v": 0.20},
+    {"lon": -93.0, "lat": 1.5,  "u": 0.08, "v": 0.15},
+    {"lon": -91.5, "lat": -3.0, "u": 0.18, "v": 0.28},
+    {"lon": -91.5, "lat": -1.5, "u": 0.14, "v": 0.22},
+    {"lon": -91.5, "lat": 0.0,  "u": 0.10, "v": 0.18},
+    {"lon": -91.5, "lat": 1.5,  "u": 0.06, "v": 0.12},
+    {"lon": -90.0, "lat": -3.0, "u": 0.20, "v": 0.25},
+    {"lon": -90.0, "lat": -1.5, "u": 0.16, "v": 0.20},
+    {"lon": -90.0, "lat": 0.0,  "u": 0.12, "v": 0.15},
+    {"lon": -90.0, "lat": 1.5,  "u": -0.05, "v": 0.10},
+    {"lon": -88.5, "lat": -3.0, "u": 0.22, "v": 0.22},
+    {"lon": -88.5, "lat": -1.5, "u": 0.18, "v": 0.18},
+    {"lon": -88.5, "lat": 0.0,  "u": 0.14, "v": 0.12},
+    {"lon": -88.5, "lat": 1.5,  "u": -0.08, "v": 0.08},
+    {"lon": -87.0, "lat": -3.0, "u": 0.25, "v": 0.20},
+    {"lon": -87.0, "lat": -1.5, "u": 0.20, "v": 0.15},
+    {"lon": -87.0, "lat": 0.0,  "u": 0.15, "v": 0.10},
+    {"lon": -87.0, "lat": 1.5,  "u": -0.10, "v": 0.05}
+  ]
+}

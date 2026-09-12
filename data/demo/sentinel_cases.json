@@ -1,0 +1,109 @@
+[
+  {
+    "vessel_id": "vessel_hero_01",
+    "name": "FU YUAN YU 882",
+    "flag": "CN",
+    "event_time": "2024-01-15T04:32:00Z",
+    "gap_start": "2024-01-14T10:00:00Z",
+    "gap_end": "2024-01-15T04:30:00Z",
+    "gap_hours": 18.5,
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [[[-90.5, -0.2], [-89.5, -0.2], [-89.5, 0.8], [-90.5, 0.8], [-90.5, -0.2]]]
+    },
+    "protected_area_relation": "near",
+    "fishing_signal": true,
+    "loitering_signal": true,
+    "repeat_count": 2,
+    "risk_score": 85.0,
+    "risk_level": "CRITICAL",
+    "evidence": [
+      {
+        "feature": "ais_gap_hours",
+        "value": 18.5,
+        "points": 23.13,
+        "source": "GFW Events API v3",
+        "explanation": "AIS transponder was silent for 18.5 hours — contributes 23.13 risk points."
+      },
+      {
+        "feature": "fishing_near_mpa",
+        "value": true,
+        "points": 25.0,
+        "source": "GFW Events API v3",
+        "explanation": "Apparent fishing detected near a Marine Protected Area — significant concern for IUU fishing."
+      },
+      {
+        "feature": "protected_area_proximity",
+        "value": "near",
+        "points": 12.0,
+        "source": "Protected Planet WDPA",
+        "explanation": "Vessel is 10.2 km from the nearest MPA boundary."
+      },
+      {
+        "feature": "loitering_behaviour",
+        "value": true,
+        "points": 15.0,
+        "source": "GFW Events API v3",
+        "explanation": "Vessel exhibited loitering behaviour — extended period at < 3 knots near MPA boundary waters."
+      },
+      {
+        "feature": "repeat_offender",
+        "value": 2,
+        "points": 4.0,
+        "source": "Historical Records",
+        "explanation": "2 prior incident(s) on record — contributes 4 risk points."
+      }
+    ],
+    "confidence": 0.92
+  },
+  {
+    "vessel_id": "vessel_control_01",
+    "name": "MAERSK SELETAR",
+    "flag": "SG",
+    "event_time": "2024-01-15T12:00:00Z",
+    "gap_start": null,
+    "gap_end": null,
+    "gap_hours": 0.0,
+    "geometry": {
+      "type": "Point",
+      "coordinates": [-89.0, 1.5]
+    },
+    "protected_area_relation": "outside",
+    "fishing_signal": false,
+    "loitering_signal": false,
+    "repeat_count": 0,
+    "risk_score": 0.0,
+    "risk_level": "LOW",
+    "evidence": [],
+    "confidence": 0.3
+  },
+  {
+    "vessel_id": "vessel_control_02",
+    "name": "PACIFIC EXPLORER",
+    "flag": "PA",
+    "event_time": "2024-01-15T08:15:00Z",
+    "gap_start": "2024-01-15T06:00:00Z",
+    "gap_end": "2024-01-15T08:00:00Z",
+    "gap_hours": 2.0,
+    "geometry": {
+      "type": "Point",
+      "coordinates": [-88.0, 0.5]
+    },
+    "protected_area_relation": "outside",
+    "fishing_signal": false,
+    "loitering_signal": false,
+    "repeat_count": 0,
+    "risk_score": 2.5,
+    "risk_level": "LOW",
+    "evidence": [
+      {
+        "feature": "ais_gap_hours",
+        "value": 2.0,
+        "points": 2.5,
+        "source": "GFW Events API v3",
+        "explanation": "AIS transponder was silent for 2.0 hours — contributes 2.5 risk points."
+      }
+    ],
+    "confidence": 0.35
+  }
+]

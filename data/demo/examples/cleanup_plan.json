@@ -1,0 +1,18 @@
+{
+  "assignments": [
+    {
+      "usv_id": "usv_01",
+      "cluster_id": "cluster_01",
+      "estimated_collection_kg": 480.0,
+      "travel_distance_km": 45.2,
+      "travel_time_hours": 3.2
+    }
+  ],
+  "route_sequences": [
+    [[-89.8, -0.3], [-90.0, -0.4], [-90.2, -0.5]]
+  ],
+  "total_distance_km": 45.2,
+  "estimated_collection_kg": 480.0,
+  "capacity_utilization": 0.96,
+  "completion_time_hours": 3.2
+}

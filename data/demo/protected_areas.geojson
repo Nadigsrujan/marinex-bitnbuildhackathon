@@ -1,0 +1,38 @@
+{
+  "type": "FeatureCollection",
+  "name": "Galapagos Marine Reserve (WDPA ID: 317180) — Demo Extract",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "wdpa_id": 317180,
+        "name": "Galapagos Marine Reserve",
+        "designation": "Marine Reserve",
+        "iucn_category": "VI",
+        "country": "ECU",
+        "status": "Designated",
+        "source": "Protected Planet WDPA (demo/cache extract)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-92.0, -1.8],
+            [-91.0, -1.8],
+            [-90.0, -1.5],
+            [-89.5, -1.0],
+            [-89.2, -0.5],
+            [-89.2, 0.0],
+            [-89.5, 0.5],
+            [-90.0, 0.8],
+            [-90.5, 0.8],
+            [-91.0, 0.5],
+            [-91.5, 0.0],
+            [-92.0, -0.5],
+            [-92.0, -1.8]
+          ]
+        ]
+      }
+    }
+  ]
+}

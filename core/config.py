@@ -1,0 +1,40 @@
+"""
+MARINEX Core Configuration
+Centralizes all settings from environment variables with safe defaults.
+"""
+import os
+from pathlib import Path
+
+# -- Project Paths --
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+DEMO_DIR = DATA_DIR / "demo"
+CACHE_DIR = DATA_DIR / "cache"
+EXAMPLES_DIR = DEMO_DIR / "examples"
+
+# -- Mode --
+USE_DEMO_DATA: bool = os.getenv("USE_DEMO_DATA", "true").lower() in ("true", "1", "yes")
+
+# -- GFW (Global Fishing Watch) --
+GFW_API_TOKEN: str = os.getenv("GFW_API_TOKEN", "")
+GFW_BASE_URL: str = "https://gateway.api.globalfishingwatch.org/v3"
+GFW_TIMEOUT_S: int = int(os.getenv("GFW_TIMEOUT_S", "30"))
+
+# -- Copernicus Marine Service --
+COPERNICUS_USER: str = os.getenv("COPERNICUS_USER", "")
+COPERNICUS_PASSWORD: str = os.getenv("COPERNICUS_PASSWORD", "")
+
+# -- Server --
+API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
+API_PORT: int = int(os.getenv("API_PORT", "8000"))
+LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+
+# -- Hero Region Constants (Galapagos / Eastern Tropical Pacific) --
+HERO_BBOX = {
+    "lat_min": -3.5,
+    "lat_max": 2.5,
+    "lon_min": -93.0,
+    "lon_max": -87.0,
+}
+HERO_ORIGIN = [-88.5, 1.2]       # [lon, lat] approaching from Panama
+HERO_DESTINATION = [-91.5, -1.8]  # [lon, lat] transiting southwest

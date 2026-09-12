@@ -1,0 +1,12 @@
+{
+  "cluster_id": "cluster_01",
+  "centroid": [-90.2, -0.5],
+  "estimated_mass_kg": 1250.0,
+  "density": 3.2,
+  "impact_score": 78.5,
+  "urgency": 0.85,
+  "source": "Copernicus Marine Debris Model (demo/cache)",
+  "source_points": [
+    [-90.1, -0.4], [-90.3, -0.5], [-90.2, -0.6], [-90.15, -0.45]
+  ]
+}

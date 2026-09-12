@@ -1,0 +1,25 @@
+{
+  "trigger": "high_risk_vessel_detected",
+  "agents_called": ["sentinel", "navigator"],
+  "tool_outputs": {
+    "sentinel_risk_score": 85.0,
+    "sentinel_risk_level": "CRITICAL",
+    "navigator_reroute_distance_delta_pct": 6.67,
+    "navigator_security_exposure": "ZERO"
+  },
+  "recommendation": "Reroute commercial traffic around the identified dark-vessel activity zone near the Galapagos Marine Reserve. Recommend human review of vessel FU YUAN YU 882 for potential IUU fishing investigation.",
+  "tradeoffs": [
+    "+6.67% route distance increase",
+    "+5.56% estimated time of arrival increase",
+    "+4.52% fuel consumption proxy increase",
+    "-100% security risk exposure (complete avoidance)"
+  ],
+  "confidence": 0.88,
+  "trace": [
+    {"step": 1, "agent": "sentinel", "action": "detect_risk", "result": "vessel_hero_01 scored 85.0 CRITICAL"},
+    {"step": 2, "agent": "sentinel", "action": "export_risk_zone", "result": "Polygon risk zone generated (25 km buffer)"},
+    {"step": 3, "agent": "navigator", "action": "compute_baseline", "result": "420 km baseline route through risk corridor"},
+    {"step": 4, "agent": "navigator", "action": "compute_optimized", "result": "448 km optimized route bypassing risk zone"},
+    {"step": 5, "agent": "supervisor", "action": "evaluate_tradeoff", "result": "Reroute approved: +6.67% distance for -100% security exposure"}
+  ]
+}

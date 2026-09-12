@@ -1,0 +1,8 @@
+{
+  "usv_id": "usv_01",
+  "location": [-89.8, -0.3],
+  "capacity_kg": 500.0,
+  "battery_pct": 95.0,
+  "remaining_range_km": 120.0,
+  "status": "idle"
+}

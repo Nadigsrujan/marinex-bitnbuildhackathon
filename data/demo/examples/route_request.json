@@ -1,0 +1,20 @@
+{
+  "origin": [-88.5, 1.2],
+  "destination": [-91.5, -1.8],
+  "vessel_speed_kn": 14.0,
+  "fuel_rate_proxy": 1.0,
+  "objective_weights": {
+    "w_fuel": 0.35,
+    "w_time": 0.25,
+    "w_weather": 0.10,
+    "w_security": 0.30
+  },
+  "risk_zones": [
+    {
+      "type": "Polygon",
+      "coordinates": [[[-90.5, -0.2], [-89.5, -0.2], [-89.5, 0.8], [-90.5, 0.8], [-90.5, -0.2]]]
+    }
+  ],
+  "weather_state": null,
+  "constraints": null
+}

@@ -1,0 +1,32 @@
+{
+  "baseline_polyline": [
+    [-88.5, 1.2], [-89.0, 0.8], [-89.5, 0.4],
+    [-90.0, 0.0], [-90.5, -0.4], [-91.0, -1.0], [-91.5, -1.8]
+  ],
+  "optimized_polyline": [
+    [-88.5, 1.2], [-88.8, 1.5], [-89.3, 1.6],
+    [-90.0, 1.4], [-90.8, 1.0], [-91.2, 0.2],
+    [-91.4, -0.6], [-91.5, -1.8]
+  ],
+  "distance_km": 448.0,
+  "eta_hours": 17.1,
+  "fuel_proxy": 439.0,
+  "weather_cost": 12.5,
+  "security_cost": 0.0,
+  "total_cost": 487.6,
+  "comparison": {
+    "baseline_distance_km": 420.0,
+    "optimized_distance_km": 448.0,
+    "distance_delta_pct": 6.67,
+    "baseline_eta_hours": 16.2,
+    "optimized_eta_hours": 17.1,
+    "eta_delta_pct": 5.56,
+    "baseline_fuel_proxy": 420.0,
+    "optimized_fuel_proxy": 439.0,
+    "fuel_delta_pct": 4.52,
+    "baseline_security_exposure": "HIGH",
+    "optimized_security_exposure": "ZERO",
+    "security_exposure_delta_pct": -100.0,
+    "mode": "optimized"
+  }
+}
