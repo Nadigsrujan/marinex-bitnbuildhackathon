@@ -1,7 +1,7 @@
 """
-MARINEX API — Minimal FastAPI Entry Point
+MARINEX API — Unified FastAPI Entry Point
 ==========================================
-Registers domain routers for SENTINEL and NAVIGATOR.
+Registers domain routers for SENTINEL, NAVIGATOR, CLEANER, and SUPERVISOR.
 Provides a health endpoint for smoke-testing.
 """
 from fastapi import FastAPI
@@ -11,7 +11,7 @@ from core.config import USE_DEMO_DATA
 
 app = FastAPI(
     title="MARINEX — Autonomous Maritime Intelligence & Ocean Response",
-    version="0.1.0",
+    version="0.2.0",
     description="Unified API for SENTINEL risk detection, NAVIGATOR route optimisation, CLEANER debris response, and SUPERVISOR orchestration.",
 )
 
@@ -32,7 +32,8 @@ async def health():
     return {
         "status": "ok",
         "mode": "demo" if USE_DEMO_DATA else "live",
-        "version": "0.1.0",
+        "version": "0.2.0",
+        "agents": ["SENTINEL", "NAVIGATOR", "CLEANER", "SUPERVISOR"],
     }
 
 
@@ -51,6 +52,18 @@ def _register_routers() -> None:
         app.include_router(navigator_router, prefix="/api", tags=["navigator"])
     except ImportError:
         pass  # NAVIGATOR not yet implemented — skip
+
+    try:
+        from cleaner.router import router as cleaner_router
+        app.include_router(cleaner_router, prefix="/api", tags=["cleaner"])
+    except ImportError:
+        pass  # CLEANER not yet implemented — skip
+
+    try:
+        from supervisor.router import router as supervisor_router
+        app.include_router(supervisor_router, prefix="/api", tags=["supervisor"])
+    except ImportError:
+        pass  # SUPERVISOR not yet implemented — skip
 
 
 _register_routers()

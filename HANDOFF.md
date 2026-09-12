@@ -207,3 +207,49 @@ seed_state = CleanerService().load_seed_state()
 - Member 4 should render the Cycle 1 mock slice from
   `CleanerService.load_seed_state()` or the referenced JSON files without
   implementing CLEANER algorithms in frontend/integration code.
+
+---
+
+# HANDOFF — Hour 16 / Member 4
+
+## What changed
+- Completed the `cleaner/` module by implementing greedy USV assignment with partial collection logic in `cleaner/assignment.py`.
+- Added the `supervisor/` module for bounded orchestration. This module deterministically chains SENTINEL, NAVIGATOR, and CLEANER into a single execution flow and produces a `SupervisorDecision`.
+- Implemented a thread-safe `SharedState` store in `supervisor/state.py` to cache the latest agent outputs.
+- Registered CLEANER and SUPERVISOR API routers in `apps/api/main.py`.
+- Built the `dashboard/` Next.js frontend with Leaflet maps to unify the entire system's visual output in a single pane.
+
+## Files created/modified
+- `cleaner/assignment.py`
+- `cleaner/service.py`
+- `cleaner/router.py`
+- `supervisor/`
+- `tests/supervisor/`
+- `apps/api/main.py`
+- `dashboard/`
+- `HANDOFF.md`
+
+## Exact run/test commands
+```bash
+# Run all tests (16/16 -> 28/28 tests passing)
+py -3.12 -m pytest tests/ -v
+
+# Start the API server
+py -3.12 -m uvicorn apps.api.main:app --port 8000
+
+# Start the dashboard (in a separate terminal)
+cd dashboard
+npm run dev
+```
+
+## Sample request/response or UI path
+1. Navigate to `http://localhost:3000` to see the dashboard.
+2. Click "Run Full Analysis" to trigger the `POST /api/supervisor/run` endpoint.
+3. The dashboard will automatically fetch from `GET /api/state` and render the multi-agent results, including risk zones on the map, optimized routes, and USV cleanup plans.
+
+## Acceptance gate result
+- PASS: CLEANER correctly assigns USVs and allows partial collection for large clusters.
+- PASS: SUPERVISOR correctly strings together all agent results.
+- PASS: Next.js dashboard correctly visualises the shared state.
+- PASS: All 28 tests passing.
+
