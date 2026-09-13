@@ -25,6 +25,6 @@ def test_subscription_and_class_b_timestamp(monkeypatch):
     assert "Apikey" not in sent[0]
     assert sent[0]["BoundingBoxes"] == [[[-90, -180], [90, 180]]]
     assert client.get_sequence() == 1
-    vessel = client.get_live_vessels()[0]
+    vessel = next(v for v in client.get_live_vessels() if v.mmsi == "123456789")
     assert vessel.timestamp == "2026-09-13T04:00:00.123456+00:00"
     assert vessel.heading_deg == 45

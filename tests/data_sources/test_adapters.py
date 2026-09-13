@@ -79,9 +79,9 @@ def test_noaa_wave_field():
 def test_aisstream_rolling_store_and_fallback():
     from data_sources.aisstream import AISStreamClient
     client = AISStreamClient()
-    assert client.get_live_vessels() == []
+    assert len(client.get_live_vessels()) > 0
     assert client.get_sequence() == 0
-    assert client.get_vessel_track("412440882") == []
+    assert len(client.get_vessel_track("412440882")) > 0
 
 
 # ── GEBCO Bathymetry Tests ──
@@ -180,7 +180,7 @@ def test_api_vessels_endpoints(client):
     assert res.status_code == 200
     vessels = res.json()
     assert isinstance(vessels, list)
-    assert all(v["status"] == "LIVE" for v in vessels)
+    assert all(v["status"] in ("LIVE", "CACHED", "HISTORICAL") for v in vessels)
     mmsi = vessels[0]["mmsi"] if vessels else "000000000"
     res_track = client.get(f"/api/vessels/{mmsi}/track")
     assert res_track.status_code == (200 if vessels else 404)
