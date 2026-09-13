@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def _load_local_env() -> None:
-    """Load an ignored project .env without overriding process settings."""
+    """Load an ignored project .env."""
     env_path = Path(__file__).resolve().parent.parent / ".env"
     if not env_path.exists():
         return
@@ -16,7 +16,7 @@ def _load_local_env() -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+        os.environ[key.strip()] = value.strip().strip('"').strip("'")
 
 
 _load_local_env()

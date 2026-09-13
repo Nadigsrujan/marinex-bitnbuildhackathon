@@ -356,6 +356,13 @@ class AISStreamClient:
 
     def get_live_vessels(self) -> List[VesselTrackPoint]:
         """Return rolling list of current vessels."""
+        if not self._running:
+            from core.config import _load_local_env
+            _load_local_env()
+            key = os.getenv("AISSTREAM_API_KEY", "").strip()
+            if key:
+                self.api_key = key
+                self.start_ingestion_background()
         with self._data_lock:
             return [point.model_copy(deep=True) for point in self._vessels.values()]
 
