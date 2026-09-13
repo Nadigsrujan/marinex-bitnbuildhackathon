@@ -15,10 +15,11 @@ from sentinel.service import SentinelService
 router = APIRouter()
 
 
-def build_dashboard() -> dict:
+def build_dashboard(use_demo: bool | None = None) -> dict:
+    demo_mode = USE_DEMO_DATA if use_demo is None else use_demo
     scenario = load_hero_scenario()
     sentinel, navigator, cleaner = (
-        SentinelService(),
+        SentinelService(use_demo=demo_mode),
         NavigatorService(),
         CleanerService(),
     )
@@ -66,7 +67,7 @@ def build_dashboard() -> dict:
             "provenance",
             {
                 "source_name": "SENTINEL case cache",
-                "source_mode": "simulated" if USE_DEMO_DATA else "unverified",
+                "source_mode": "simulated" if demo_mode else "unverified",
                 "cached": True,
                 "observed_at": case.get("event_time"),
                 "notes": "Existing demonstration case; raw historical provider bundle and source identity are not verified in this checkout.",
@@ -81,7 +82,7 @@ def build_dashboard() -> dict:
     return {
         "scenario_id": scenario.scenario_id,
         "last_updated": None,
-        "data_mode": "cached" if USE_DEMO_DATA else "connected",
+        "data_mode": "cached" if demo_mode else "connected",
         "source_health": {
             "sentinel": {
                 "status": "partial-live",

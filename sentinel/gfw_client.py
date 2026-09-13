@@ -10,6 +10,8 @@ cases from data/demo/sentinel_cases.json instead of hitting the network.
 from __future__ import annotations
 
 import json
+import hashlib
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -186,7 +188,15 @@ class GFWClient:
         import time
         import urllib.request
 
-        cache_key = f"gfw_{event_types}_{bbox}"
+        cache_fingerprint = json.dumps(
+            {"event_types": event_types, "bbox": bbox}, sort_keys=True
+        ).encode("utf-8")
+        cache_key = f"gfw_v2_{hashlib.sha256(cache_fingerprint).hexdigest()[:20]}"
+        # Backwards-compatible in-memory key retained for callers/tests that
+        # populated the pre-v2 cache directly.
+        legacy_cache_key = f"gfw_{event_types}_{bbox}"
+        if legacy_cache_key in self._MEM_CACHE:
+            cache_key = legacy_cache_key
 
         # Check in-memory TTL cache first
         if cache_key in self._MEM_CACHE:
@@ -210,15 +220,27 @@ class GFWClient:
         # Build request URL and body
         # GFW v3 validates pagination on the query string even for POST.
         url = f"{GFW_BASE_URL}/events?limit=100&offset=0"
-        payload: Dict[str, Any] = {
-            "datasets": ["public-global-fishing-events:latest"],
-            "startDate": "2024-01-01",
-            "endDate": "2024-01-31",
+        end_date = datetime.now(timezone.utc).date() + timedelta(days=1)
+        start_date = end_date - timedelta(days=45)
+        dataset_by_type = {
+            "FISHING": "public-global-fishing-events:latest",
+            "LOITERING": "public-global-loitering-events:latest",
+            "GAP": "public-global-gaps-events:latest",
+            "GAP_START": "public-global-gaps-events:latest",
         }
-        if event_types:
-            payload["types"] = event_types
+        requested_types = [str(value).upper() for value in (event_types or [])]
+        datasets = list(dict.fromkeys(
+            dataset_by_type[value] for value in requested_types if value in dataset_by_type
+        )) or [dataset_by_type["FISHING"], dataset_by_type["LOITERING"], dataset_by_type["GAP"]]
+        payload: Dict[str, Any] = {
+            "datasets": datasets,
+            "startDate": start_date.isoformat(),
+            "endDate": end_date.isoformat(),
+        }
+        if requested_types:
+            payload["types"] = requested_types
         if bbox:
-            payload["region"] = {
+            payload["geometry"] = {
                 "type": "Polygon",
                 "coordinates": [[
                     [bbox["lon_min"], bbox["lat_min"]],

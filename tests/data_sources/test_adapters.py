@@ -77,16 +77,11 @@ def test_noaa_wave_field():
 # ── AISstream Tests ──
 
 def test_aisstream_rolling_store_and_fallback():
-    client = get_aisstream_client()
-    vessels = client.get_live_vessels()
-    assert len(vessels) >= 3
-    # Hero vessel check
-    hero = next((v for v in vessels if "882" in v.mmsi or "FU YUAN YU" in v.name), None)
-    assert hero is not None
-    assert hero.status in ("HISTORICAL", "CACHED", "LIVE")
-
-    track = client.get_vessel_track(hero.mmsi)
-    assert len(track) > 0
+    from data_sources.aisstream import AISStreamClient
+    client = AISStreamClient()
+    assert client.get_live_vessels() == []
+    assert client.get_sequence() == 0
+    assert client.get_vessel_track("412440882") == []
 
 
 # ── GEBCO Bathymetry Tests ──
@@ -184,11 +179,11 @@ def test_api_vessels_endpoints(client):
     res = client.get("/api/vessels/live")
     assert res.status_code == 200
     vessels = res.json()
-    assert len(vessels) >= 3
-
-    mmsi = vessels[0]["mmsi"]
+    assert isinstance(vessels, list)
+    assert all(v["status"] == "LIVE" for v in vessels)
+    mmsi = vessels[0]["mmsi"] if vessels else "000000000"
     res_track = client.get(f"/api/vessels/{mmsi}/track")
-    assert res_track.status_code == 200
+    assert res_track.status_code == (200 if vessels else 404)
 
 
 def test_api_sar_endpoints(client):

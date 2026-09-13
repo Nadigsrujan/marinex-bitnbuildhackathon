@@ -274,6 +274,12 @@ def api_client():
     """Create a FastAPI TestClient with USE_DEMO_DATA=true."""
     from fastapi.testclient import TestClient
     from apps.api.main import app
+    import sentinel.router as sentinel_router
+    from sentinel.service import SentinelService
+
+    service = SentinelService()
+    service._gfw = GFWClient(use_demo=True)
+    sentinel_router._service = service
     return TestClient(app)
 
 

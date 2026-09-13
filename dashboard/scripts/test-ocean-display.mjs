@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { debrisPosition, vesselLabel } from '../src/lib/ocean-display.ts';
+assert.equal(vesselLabel('772851001', 'a'), 'Vessel · ID 772851001');
+assert.equal(vesselLabel('LA AHIJADA', 'a'), 'LA AHIJADA');
+const patch = { centroid: [-90, 0], source_points: [], drift_vector: { current_u_ms: 1, current_v_ms: 0, drift_factor: 1 } };
+const start = debrisPosition(patch, 0, 0);
+const later = debrisPosition(patch, 0, 12);
+assert(later[0] > start[0]);
+assert.deepEqual(debrisPosition(patch, 0, 0), start);
+assert.deepEqual(debrisPosition(patch, 0, 20), later);
+assert.notDeepEqual(debrisPosition(patch, 1, 6), debrisPosition(patch, 2, 6));
+console.log('Ocean display: labels, transport, deterministic replay and forecast cap passed.');

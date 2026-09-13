@@ -67,7 +67,7 @@ def run_supervisor(request: Dict[str, Any] = None) -> Dict[str, Any]:
     # ------------------------------------------------------------------
     # Step 3: SENTINEL – risk analysis
     # ------------------------------------------------------------------
-    sentinel = SentinelService()
+    sentinel = SentinelService(use_demo=True)
     try:
         case = sentinel.analyze_case(vessel_id)
         if case is None:

@@ -1,0 +1,49 @@
+{
+  "first_entry": {
+    "dataset": "public-global-vessel-identity:v4.0",
+    "registryInfoTotalRecords": 0,
+    "registryInfo": [],
+    "registryOwners": [],
+    "combinedSourcesInfo": [
+      {
+        "vesselId": "839888345-555b-d92b-24d7-ea30d00584fa",
+        "geartypes": [
+          {
+            "name": "OTHER",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2020,
+            "yearTo": 2020
+          }
+        ],
+        "shiptypes": [
+          {
+            "name": "OTHER",
+            "source": "COMBINATION_OF_REGISTRY_AND_AIS_INFERRED_NN_INFO",
+            "yearFrom": 2020,
+            "yearTo": 2020
+          }
+        ]
+      }
+    ],
+    "selfReportedInfo": [
+      {
+        "id": "839888345-555b-d92b-24d7-ea30d00584fa",
+        "ssvid": "412440882",
+        "shipname": null,
+        "nShipname": null,
+        "flag": "CHN",
+        "callsign": "BYYZ7",
+        "imo": null,
+        "messagesCounter": 7,
+        "positionsCounter": 5,
+        "sourceCode": [
+          "AIS"
+        ],
+        "matchFields": "NO_MATCH",
+        "transmissionDateFrom": "2020-02-19T01:36:57Z",
+        "transmissionDateTo": "2020-02-19T01:47:51Z"
+      }
+    ]
+  },
+  "total": 5
+}

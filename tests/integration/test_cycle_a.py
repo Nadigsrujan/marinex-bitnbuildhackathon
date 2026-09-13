@@ -36,7 +36,7 @@ def test_bundled_frontend_snapshot_equals_current_domain_outputs():
         .strip()
         .rstrip(";")
     )
-    actual = build_dashboard()
+    actual = build_dashboard(use_demo=True)
     actual["data_mode"] = "cached"
     assert bundled == actual
 
@@ -48,7 +48,7 @@ def test_no_network_is_needed_for_hero(monkeypatch):
         raise AssertionError("Unexpected network call during cached judging")
 
     monkeypatch.setattr(socket.socket, "connect", blocked)
-    state = build_dashboard()
+    state = build_dashboard(use_demo=True)
     assert len(state["cleaner"]["cleanup_plan"]["assignments"]) == 3
     assert state["cleaner"]["context"]["source_mode"] == "reference"
     assert all(

@@ -10,11 +10,13 @@ import math
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from core.logging import get_logger
+from core.config import OPEN_METEO_API_KEY, OPEN_METEO_BASE_URL
 
 logger = get_logger("sentinel.open_meteo_client")
 
@@ -72,7 +74,18 @@ class OpenMeteoClient:
         """
         try:
             # We fetch current live conditions (or a 1-day forecast) to ensure it never returns empty historical data
-            url = f"https://marine-api.open-meteo.com/v1/marine?latitude={lat}&longitude={lon}&hourly=wave_height,ocean_current_velocity,ocean_current_direction&timezone=GMT"
+            params = {
+                "latitude": lat,
+                "longitude": lon,
+                "hourly": "wave_height,ocean_current_velocity,ocean_current_direction,sea_surface_temperature",
+                "forecast_hours": 24,
+                "past_hours": 1,
+                "timezone": "GMT",
+                "cell_selection": "sea",
+            }
+            if OPEN_METEO_API_KEY:
+                params["apikey"] = OPEN_METEO_API_KEY
+            url = f"{OPEN_METEO_BASE_URL}/v1/marine?{urllib.parse.urlencode(params)}"
             req = urllib.request.Request(url, headers={"User-Agent": "MARINEX/1.0"})
             with urllib.request.urlopen(req, timeout=10.0) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
@@ -80,11 +93,14 @@ class OpenMeteoClient:
             hourly = data.get("hourly", {})
             times = hourly.get("time", [])
             
-            # Use the first available data point
+            # forecast_hours anchors the response around the current hour.
             if times:
-                swh = hourly.get("wave_height", [])[0]
-                vel_kmh = hourly.get("ocean_current_velocity", [])[0]
-                dir_deg = hourly.get("ocean_current_direction", [])[0]
+                index = 1 if len(times) > 1 else 0
+                swh = hourly.get("wave_height", [None])[index]
+                vel_kmh = hourly.get("ocean_current_velocity", [None])[index]
+                dir_deg = hourly.get("ocean_current_direction", [None])[index]
+                sst_values = hourly.get("sea_surface_temperature", [])
+                sst = sst_values[index] if len(sst_values) > index and sst_values[index] is not None else _GALAPAGOS_BASELINE["sst_c"]
                 
                 # Default to baseline if missing
                 if swh is None:
@@ -101,11 +117,13 @@ class OpenMeteoClient:
                     
                 logger.info(f"Open-Meteo live data fetched for ({lon:.3f}, {lat:.3f}): SWH={swh}m, U={u:.3f}, V={v:.3f}")
                 return EnvSnapshot(
+                    sst_c=round(sst, 2),
                     swh_m=round(swh, 2),
                     u_current_ms=round(u, 3),
                     v_current_ms=round(v, 3),
                     source_label="Open-Meteo Marine API (live)",
-                    fetched_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    fetched_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    dataset_ids={"provider": "Open-Meteo Marine", "valid_time": times[index]},
                 )
         except Exception as exc:
             logger.warning(f"Open-Meteo live fetch failed for ({lon}, {lat}): {exc}")

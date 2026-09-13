@@ -109,6 +109,8 @@ Open **`http://localhost:3000`** in your browser.
 - `GET /api/debris/drift` — Time-stepped debris drift advection trajectories.
 - `GET /api/bathymetry/region` — GEBCO regional bathymetry depth grid.
 - `GET /api/sar/scenes` — Copernicus Sentinel-1 SAR acquisition metadata & footprints.
+- `GET /api/realtime/snapshot` — Current Ocean Pulse contacts, tracks, freshness, uncertainty, alerts, and provider state.
+- `GET /api/realtime/stream` — Browser-native Server-Sent Events stream (2-second heartbeat).
 
 ### Domain Modules
 - `GET /api/cases` — SENTINEL dark vessel investigation queue.

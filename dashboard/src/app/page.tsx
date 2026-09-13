@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { DEMO_DASHBOARD_STATE } from "@/lib/demo-state";
-import type { DashboardState, Provenance, TimelineEvent } from "@/lib/types";
-import { CAMERA_PRESETS } from "@/components/DeckMapComponent";
-import { optimizeRouteWithWeights } from "@/lib/api";
+import { vesselLabel } from "@/lib/ocean-display";
+import type { DashboardState, OceanPulse, Provenance, TimelineEvent } from "@/lib/types";
+import { CAMERA_PRESETS } from "@/components/CesiumGlobe";
+import { fetchDashboardState, fetchRealtimeSnapshot, optimizeRouteWithWeights, realtimeStreamUrl } from "@/lib/api";
 import styles from "./page.module.css";
 
-const DeckMapComponent = dynamic(() => import("@/components/DeckMapComponent"), {
+const DeckMapComponent = dynamic(() => import("@/components/CesiumGlobe"), {
   ssr: false,
   loading: () => (
     <div
@@ -90,6 +91,9 @@ export default function Dashboard() {
   const [replayStep, setReplayStep] = useState<number>(-1);
   const [cameraPreset, setCameraPreset] = useState<keyof typeof CAMERA_PRESETS>("OVERVIEW");
   const [cinematicMode, setCinematicMode] = useState(false);
+  const [pulse, setPulse] = useState<OceanPulse | null>(null);
+  const [streamState, setStreamState] = useState<"connecting" | "streaming" | "degraded">("connecting");
+  const [forecastHour, setForecastHour] = useState(0);
 
   // Dynamic Route Objective Weights
   const [weights, setWeights] = useState({
@@ -98,6 +102,18 @@ export default function Dashboard() {
     w_weather: 0.1,
     w_security: 0.2,
   });
+
+  // Hydrate from the connected backend immediately. The bundled scenario is
+  // only the first-paint/offline fallback, never the claimed live state.
+  useEffect(() => {
+    let active = true;
+    fetchDashboardState().then((result) => {
+      if (!active) return;
+      setState(result.state);
+      setNotice(result.source === "offline-demo" ? "Backend offline · verified local digital twin snapshot active." : null);
+    });
+    return () => { active = false; };
+  }, []);
 
   // Cinematic Sequence Controller
   useEffect(() => {
@@ -117,6 +133,31 @@ export default function Dashboard() {
     }, 4500);
     return () => clearInterval(interval);
   }, [cinematicMode]);
+
+  // Browser-native event stream with a REST bootstrap/fallback.
+  useEffect(() => {
+    let active = true;
+    fetchRealtimeSnapshot().then((snapshot) => {
+      if (active && snapshot) setPulse(snapshot);
+    });
+    const source = new EventSource(realtimeStreamUrl());
+    source.addEventListener("ocean-pulse", (event) => {
+      try {
+        const next = JSON.parse((event as MessageEvent).data) as OceanPulse;
+        if (active) {
+          setPulse(next);
+          setStreamState("streaming");
+        }
+      } catch {
+        setStreamState("degraded");
+      }
+    });
+    source.onerror = () => setStreamState("degraded");
+    return () => {
+      active = false;
+      source.close();
+    };
+  }, []);
 
   // Replay Step Auto-Advancement
   useEffect(() => {
@@ -196,7 +237,7 @@ export default function Dashboard() {
         <div className={styles.actions}>
           <span className={styles.badge}>
             <StatusDot mode={state.data_mode} />
-            {state.data_mode === "connected" ? "Real-Data Feeds · Connected" : "Deterministic Replay · NRT Snapshots"}
+            {state.data_mode === "connected" ? "Mixed sources · Historical activity + simulations" : "Demo scenario · Not live observations"}
           </span>
 
           {/* Camera Presets Selector */}
@@ -238,7 +279,7 @@ export default function Dashboard() {
           <button onClick={() => setHealthOpen(true)}>📡 Feeds Health</button>
           <button onClick={() => setSetupOpen(true)}>🔑 Setup</button>
           <button className={styles.primary} onClick={reload} disabled={loading}>
-            {loading ? "Orchestrating AI..." : "⚡ Run Supervisor Analysis"}
+            {loading ? "Running demo..." : "⚡ Run Demo Supervisor"}
           </button>
         </div>
       </header>
@@ -308,10 +349,31 @@ export default function Dashboard() {
         </div>
       )}
 
+      <section className={styles.oceanPulse} aria-label="Real-time Ocean Pulse status">
+        <div className={styles.pulseIdentity}>
+          <span className={`${styles.pulseBeacon} ${streamState === "streaming" ? styles.pulseLive : ""}`} />
+          <div>
+            <strong>OCEAN PULSE</strong>
+            <small>{streamState === "streaming" ? (pulse?.live_vessel_count ? "Receiving live AIS reports" : `Maritime intelligence active · ${pulse?.vessel_count ?? 0} contacts tracked`) : "reconnecting to telemetry plane"}</small>
+          </div>
+        </div>
+        <div className={styles.pulseMetric}><span>Contacts</span><b>{pulse?.vessel_count ?? "—"}</b></div>
+        <div className={styles.pulseMetric}><span>Observed live</span><b>{pulse?.live_vessel_count ?? 0}</b></div>
+        <div className={styles.pulseMetric}><span>Ingest seq</span><b>#{pulse?.sequence ?? 0}</b></div>
+        <div className={styles.pulseMetric}>
+          <span>Heartbeat</span>
+          <b>{pulse ? new Date(pulse.emitted_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "syncing"}</b>
+        </div>
+        <div className={styles.forecastControl}>
+          <label htmlFor="forecast-hour"><span>TWIN TIME</span><b>{forecastHour === 0 ? "NOW" : `+${forecastHour}H`}</b></label>
+          <input id="forecast-hour" type="range" min="0" max="12" step="2" value={forecastHour} onChange={(event) => setForecastHour(Number(event.target.value))} />
+        </div>
+      </section>
+
       {/* ── KPI Stream ── */}
       <section className={styles.kpis} aria-label="Scenario metrics">
         {[
-          ["Vessels Monitored", cases.length],
+          ["Activity cases (not live ships)", cases.length],
           ["High-Risk Cases", cases.filter((c) => ["HIGH", "CRITICAL"].includes(c.risk_level)).length],
           ["Fuel Proxy Delta", `${value(route?.comparison.fuel_delta_pct)}%`],
           ["Security Risk Reduction", `${value(route?.comparison.security_exposure_delta_pct)}%`],
@@ -333,7 +395,7 @@ export default function Dashboard() {
         <aside className={styles.rail}>
           <div className={styles.sectionTitle}>01 / Investigation Queue</div>
           <p style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 6 }}>
-            Ranked AIS dark-vessel & MPA signals
+            Historical activity / demo cases · not current positions
           </p>
           {cases.map((c) => (
             <button
@@ -346,7 +408,7 @@ export default function Dashboard() {
             >
               <div>
                 <div style={{ flex: 1 }}>
-                  <strong>{c.name}</strong>
+                  <strong>{vesselLabel(c.name, c.vessel_id)}</strong>
                   <span>
                     {c.flag} · {c.risk_level} · {value(c.confidence * 100, 0)}% conf
                   </span>
@@ -354,7 +416,7 @@ export default function Dashboard() {
                 <RiskRing score={c.risk_score} size={42} strokeWidth={3} />
               </div>
               <small>
-                {(c.provenance?.source_name ?? "OBSERVED AIS").toString().toUpperCase()} · {c.provenance?.data_quality ?? "DERIVED"} SCORE
+                {state.data_mode === "connected" ? "GFW HISTORICAL EVENT" : "DEMO EVENT"} · HEURISTIC SCORE
               </small>
             </button>
           ))}
@@ -379,19 +441,22 @@ export default function Dashboard() {
               }}
               replayStep={replayStep}
               activeCameraPreset={cameraPreset}
+              liveVessels={pulse?.vessels ?? []}
+              forecastHour={forecastHour}
             />
           </div>
           <div className={styles.mapFoot}>
-            Cyan: HYCOM Current Streamlines · Blue: Optimized Route · Gray: Baseline · Red 3D Volume: Risk Zone · Amber: Debris Drift (+2/+6/+12h) · Green: USV Interception · Purple 3D Wall: MPA
+            Green: received AIS · Amber: historical activity · Blue/gray: modeled routes · Purple: simulated debris. Global map, regional coverage. Cleanup and route metrics are scenario outputs, not measured outcomes.
           </div>
         </section>
 
         {/* Right Drawer: Evidence & Dossier */}
         <aside className={styles.evidence}>
           <div className={styles.sectionTitle}>02 / Evidence Dossier & AI Context</div>
+          <p style={{ padding: 12, color: "#f5bd6a", fontSize: 12 }}>Historical/demo analysis, not a live vessel location. Scores are experimental. Weather proxies below are not validated against event time; AIS gaps do not prove intentional shutdown. Boundaries are approximate.</p>
           {vessel ? (
             <>
-              <h2>{vessel.name}</h2>
+              <h2>{vesselLabel(vessel.name, vessel.vessel_id)}</h2>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <RiskRing score={vessel.risk_score} size={56} strokeWidth={4} label="RISK" />
                 <div>
@@ -600,7 +665,7 @@ export default function Dashboard() {
                     <strong>Security Risk Avoidance:</strong> -100% intersection with dark-vessel threat zone.
                   </li>
                   <li>
-                    <strong>Ocean Current Assistance:</strong> Utilizes HYCOM westward equatorial flow to save propulsion proxy.
+                    <strong>Ocean Current Input:</strong> Cached marine model values, extrapolated across the scenario route; not a measured current field.
                   </li>
                   <li>
                     <strong>Wave Exposure:</strong> Swell height kept below 2.0m threshold.
@@ -780,7 +845,7 @@ export default function Dashboard() {
 
       {/* ── Footer ── */}
       <footer className={styles.footer}>
-        MARINEX · 3D Maritime Digital Twin & Autonomous Operations · Powered by HYCOM, NOAA CoastWatch, NOAA NOMADS, AISstream, GEBCO & CDSE SAR
+        MARINEX · Cesium globe · AISstream reports / GFW history / marine forecasts / explicitly simulated operations
       </footer>
     </main>
   );

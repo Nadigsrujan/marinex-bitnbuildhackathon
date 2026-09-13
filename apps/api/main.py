@@ -104,10 +104,15 @@ def _register_routers() -> None:
     except ImportError:
         pass
 
+    try:
+        from apps.api.routers.realtime import router as realtime_router
+        app.include_router(realtime_router, prefix="/api/realtime", tags=["realtime"])
+    except ImportError:
+        pass
+
 
 _register_routers()
 
 from apps.api.dashboard import router as dashboard_router
 app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
-
 

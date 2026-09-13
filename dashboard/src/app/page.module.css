@@ -14,8 +14,33 @@
   animation: fadeIn 0.4s ease;
 }
 
+.oceanPulse {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.4fr) repeat(4, minmax(86px, .65fr)) minmax(240px, 1.6fr);
+  gap: 1px;
+  margin: 12px 0;
+  border: 1px solid rgba(45, 212, 191, .22);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(45, 212, 191, .12);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, .28);
+}
+
+.oceanPulse > div { min-width: 0; padding: 10px 14px; background: rgba(6, 13, 23, .94); }
+.pulseIdentity { display: flex; align-items: center; gap: 11px; }
+.pulseIdentity strong { display: block; font: 700 11px var(--font-mono); letter-spacing: 1.6px; color: #5eead4; }
+.pulseIdentity small { display: block; color: var(--text-muted); font-size: 9px; margin-top: 2px; }
+.pulseBeacon { width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 0 5px rgba(245,158,11,.08); }
+.pulseLive { background: #2dd4bf; animation: pulseDot 1.8s infinite; }
+.pulseMetric span { display: block; color: var(--text-muted); font: 500 9px var(--font-mono); text-transform: uppercase; letter-spacing: .7px; }
+.pulseMetric b { display: block; margin-top: 2px; color: #e6fffb; font: 650 14px var(--font-mono); }
+.forecastControl label { display: flex; justify-content: space-between; font: 600 9px var(--font-mono); color: var(--text-muted); }
+.forecastControl label b { color: #5eead4; }
+.forecastControl input { width: 100%; accent-color: #2dd4bf; margin-top: 8px; }
+
 /* ── Header ── */
 .header {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -444,7 +469,7 @@
 }
 
 .map {
-  height: 505px;
+  height: 620px;
   position: relative;
 }
 
@@ -769,6 +794,7 @@
 }
 
 @media (max-width: 1150px) {
+  .oceanPulse { grid-template-columns: repeat(3, 1fr); }
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);
   }
@@ -797,6 +823,8 @@
 }
 
 @media (max-width: 700px) {
+  .oceanPulse { grid-template-columns: 1fr 1fr; }
+  .pulseIdentity, .forecastControl { grid-column: 1 / -1; }
   .shell {
     padding: 12px;
   }

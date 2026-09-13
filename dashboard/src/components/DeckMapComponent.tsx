@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Map, { NavigationControl } from "react-map-gl/mapbox";
+import Map, { NavigationControl } from "react-map-gl/maplibre";
 import { DeckGL } from "@deck.gl/react";
 import { ScatterplotLayer, ArcLayer, PathLayer, PolygonLayer, ColumnLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import type { Coordinate, DashboardState, VesselGeometry, SARScene } from "@/lib/types";
+import type { Coordinate, DashboardState, LiveVessel, VesselGeometry, SARScene } from "@/lib/types";
 import { fetchBathymetry, fetchChlorophyll, fetchSARScenes, fetchSST } from "@/lib/api";
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 // 100% Free & Open Dark Vector Map Style (CartoCDN — no API key, credit card, or payment required)
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
@@ -35,6 +35,8 @@ interface Props {
   onSelectCase?: (id: string) => void;
   replayStep?: number;
   activeCameraPreset?: keyof typeof CAMERA_PRESETS;
+  liveVessels?: LiveVessel[];
+  forecastHour?: number;
 }
 
 export default function DeckMapComponent({
@@ -43,6 +45,8 @@ export default function DeckMapComponent({
   onSelectCase,
   replayStep = -1,
   activeCameraPreset = "OVERVIEW",
+  liveVessels = [],
+  forecastHour = 0,
 }: Props) {
   const [viewState, setViewState] = useState(CAMERA_PRESETS[activeCameraPreset] || CAMERA_PRESETS.OVERVIEW);
   const [time, setTime] = useState(0);
@@ -385,6 +389,45 @@ export default function DeckMapComponent({
       })
     );
 
+    // Ocean Pulse contacts stay separate from investigation cases. Teal marks
+    // observed AIS; slate marks a cached fix and is never silently animated.
+    if (liveVessels.length > 0) {
+      const liveTracks = liveVessels.filter((v) => v.track.length > 1);
+      result.push(
+        new PathLayer({
+          id: "ocean-pulse-tracks",
+          data: liveTracks,
+          getPath: (d) => d.track.map((p: { lon: number; lat: number }) => [p.lon, p.lat]),
+          getColor: (d) => d.status === "LIVE" ? [45, 212, 191, 190] : [100, 116, 139, 100],
+          getWidth: 1.6,
+          widthUnits: "pixels",
+        }),
+        new ScatterplotLayer({
+          id: "ocean-pulse-uncertainty",
+          data: liveVessels,
+          getPosition: (d) => [d.estimated_position.lon, d.estimated_position.lat],
+          getRadius: (d) => Math.max(900, d.estimated_position.uncertainty_radius_m),
+          getFillColor: (d) => d.status === "LIVE" ? [45, 212, 191, 25] : [100, 116, 139, 16],
+          getLineColor: (d) => d.status === "LIVE" ? [45, 212, 191, 150] : [100, 116, 139, 80],
+          stroked: true,
+          lineWidthUnits: "pixels",
+          getLineWidth: 1,
+        }),
+        new ScatterplotLayer({
+          id: "ocean-pulse-contacts",
+          data: liveVessels,
+          getPosition: (d) => [d.lon, d.lat],
+          getRadius: (d) => d.status === "LIVE" ? 1900 * pulseScale : 1300,
+          getFillColor: (d) => d.status === "LIVE" ? [45, 212, 191, 245] : [100, 116, 139, 190],
+          getLineColor: [226, 232, 240, 180],
+          stroked: true,
+          lineWidthUnits: "pixels",
+          getLineWidth: 1,
+          pickable: true,
+        }),
+      );
+    }
+
     // 10. Debris Clusters & Time-Stepped Drift Predictions (+2h, +6h, +12h)
     if (showClusters) {
       result.push(
@@ -430,7 +473,9 @@ export default function DeckMapComponent({
 
           // Forecast horizon dots (+2h, +6h, +12h)
           const driftDots = state.cleaner.clusters.flatMap((c) =>
-            (c.predicted_positions ?? []).map((p) => ({
+            (c.predicted_positions ?? [])
+              .filter((p) => forecastHour === 0 || p.horizon_hours <= forecastHour)
+              .map((p) => ({
               position: p.position,
               hours: p.horizon_hours,
               cluster_id: c.cluster_id,
@@ -527,6 +572,8 @@ export default function DeckMapComponent({
     bathySamples,
     time,
     onSelectCase,
+    liveVessels,
+    forecastHour,
   ]);
 
   const getTooltip = useCallback(
@@ -542,6 +589,13 @@ export default function DeckMapComponent({
             <div style="color: #fb7185; font-size: 11px;">Risk Score: ${obj.risk_score}/100 · ${obj.risk_level}</div>
             <div style="color: #94a3b8; font-size: 10px;">Flag: ${obj.flag} · Confidence: ${((obj.confidence as number) * 100).toFixed(0)}%</div>
           </div>`,
+          className: "deck-tooltip",
+        };
+      }
+
+      if (layerId === "ocean-pulse-contacts") {
+        return {
+          html: `<div style="font-family: 'Inter', sans-serif;"><div style="font-weight: 700; color: #2dd4bf;">${obj.name}</div><div style="color: #f8fafc; font-size: 11px;">${obj.speed_kn} kn · course ${obj.course_over_ground}°</div><div style="color: #94a3b8; font-size: 10px;">${obj.status} · age ${Math.round(obj.age_seconds as number)}s · MMSI ${obj.mmsi}</div></div>`,
           className: "deck-tooltip",
         };
       }
@@ -686,6 +740,7 @@ export default function DeckMapComponent({
           Operational Legend
         </div>
         <LegendItem color="#fb7185" shape="dot" label="Vessel Risk / Contact" />
+        <LegendItem color="#2dd4bf" shape="dot" label="Ocean Pulse AIS / Cached Contact" />
         <LegendItem color="#fb7185" shape="box" label="3D Risk Volume (Extruded)" opacity={0.5} />
         <LegendItem color="#a78bfa" shape="box" label="Galápagos MPA Reserve" opacity={0.3} />
         <LegendItem color="#cbd5e1" shape="line-dash" label="Baseline Transit Route" />

@@ -46,6 +46,13 @@ COPERNICUS_BASE_URL: str = "https://data.marine.copernicus.eu"
 COPERNICUS_TIMEOUT_S: int = int(os.getenv("COPERNICUS_TIMEOUT_S", "60"))
 COPERNICUS_CACHE_TTL_S: int = int(os.getenv("COPERNICUS_CACHE_TTL_S", "3600"))
 
+# -- Open-Meteo Marine (free endpoint needs no key; customer endpoint does) --
+OPEN_METEO_API_KEY: str = os.getenv("OPEN_METEO_API_KEY", "")
+OPEN_METEO_BASE_URL: str = os.getenv(
+    "OPEN_METEO_BASE_URL",
+    "https://customer-marine-api.open-meteo.com" if OPEN_METEO_API_KEY else "https://marine-api.open-meteo.com",
+).rstrip("/")
+
 # -- Server --
 API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
 API_PORT: int = int(os.getenv("API_PORT", "8000"))

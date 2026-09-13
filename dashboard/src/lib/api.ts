@@ -8,12 +8,29 @@ import type {
   SARScene,
   SatelliteLayer,
   WaveGrid,
+  OceanPulse,
 } from "./types";
 
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 const DEMO_FALLBACK_ENABLED = process.env.NEXT_PUBLIC_USE_DEMO_DATA !== "false";
+
+export function realtimeStreamUrl(): string {
+  return `${API_BASE_URL}/api/realtime/stream`;
+}
+
+export async function fetchRealtimeSnapshot(): Promise<OceanPulse | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/realtime/snapshot`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
+  }
+}
 
 export type DataSource = "api" | "offline-demo";
 

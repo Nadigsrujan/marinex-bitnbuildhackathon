@@ -14,6 +14,7 @@ and the SUPERVISOR cross-agent bridge.
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from schemas.models import EvidenceItem, VesselCase
@@ -59,8 +60,8 @@ class SentinelService:
     scoring pipeline against GFW and WDPA data.
     """
 
-    def __init__(self):
-        self._gfw = GFWClient()
+    def __init__(self, use_demo: Optional[bool] = None):
+        self._gfw = GFWClient(use_demo=use_demo)
         self._pa = ProtectedAreaClient()
         self._scorer = RiskScorer()
         self._copernicus = OpenMeteoClient()
@@ -78,9 +79,8 @@ class SentinelService:
         if self._loaded:
             return
         raw_events = self._gfw.fetch_events(bbox=HERO_BBOX)
-        # Limit live events to max 5 to prevent Copernicus from timing out Next.js
-        if len(raw_events) > 5:
-            raw_events = raw_events[:5]
+        # Historical events do not require one current-weather request each.
+        # Process the complete provider page instead of silently keeping five.
             
         for raw in raw_events:
             case = self._process_event(raw)
@@ -101,11 +101,12 @@ class SentinelService:
 
         # -- Extract raw signals --
         # Handle both demo structure and live GFW API structure
-        vessel_id = raw.get("vessel_id", raw.get("id", "unknown"))
+        vessel = raw.get("vessel") if isinstance(raw.get("vessel"), dict) else {}
+        vessel_id = raw.get("vessel_id", vessel.get("id", raw.get("id", "unknown")))
         
         if "position" in raw:
-            lon = raw["position"].get("lon", 0.0)
-            lat = raw["position"].get("lat", 0.0)
+            lon = float(raw["position"].get("lon", 0.0))
+            lat = float(raw["position"].get("lat", 0.0))
         elif "regions" in raw and isinstance(raw["regions"], dict):
             # Sometimes events have regions instead of explicit positions
             lon = raw.get("lon", 0.0)
@@ -113,14 +114,26 @@ class SentinelService:
         else:
             lon = raw.get("lon", 0.0)
             lat = raw.get("lat", 0.0)
-        gap_hours = raw.get("gap_hours", 0.0)
-        fishing_signal = raw.get("fishing_signal", False)
-        loitering_signal = raw.get("loitering_signal", False)
+        event_type = str(raw.get("type", "")).upper()
+        event_time = raw.get(
+            "event_time",
+            raw.get("end", raw.get("start", datetime.now(timezone.utc).isoformat())),
+        )
+        gap_hours = float(raw.get("gap_hours", 0.0))
+        if event_type in ("GAP", "GAP_START") and raw.get("start") and raw.get("end"):
+            try:
+                gap_start = datetime.fromisoformat(str(raw["start"]).replace("Z", "+00:00"))
+                gap_end = datetime.fromisoformat(str(raw["end"]).replace("Z", "+00:00"))
+                gap_hours = max(0.0, (gap_end - gap_start).total_seconds() / 3600.0)
+            except ValueError:
+                pass
+        fishing_signal = bool(raw.get("fishing_signal", event_type == "FISHING"))
+        loitering_signal = bool(raw.get("loitering_signal", event_type == "LOITERING"))
         repeat_count = raw.get("repeat_count", 0)
-        event_time = raw.get("event_time", "2024-01-15T00:00:00Z")
 
         # -- Ocean environment context (Copernicus; fallback if unavailable) --
-        env = self._copernicus.fetch_environment(lon, lat, event_time)
+        from sentinel.open_meteo_client import EnvSnapshot
+        env = EnvSnapshot.from_baseline()
         logger.info(
             "[%s] Env context: SST=%.1f°C, SWH=%.1fm, CHL=%.3f mg/m³ (source: %s).",
             vessel_id, env.sst_c, env.swh_m, env.chl_mg_m3, env.source_label,
@@ -137,15 +150,15 @@ class SentinelService:
             protected_area_relation=relation,
             protected_area_distance_km=dist_km,
             repeat_count=repeat_count,
-            swh_m=env.swh_m,
-            chl_mg_m3=env.chl_mg_m3,
-            sst_anomaly_c=env.sst_anomaly_c,
-            env_source_label=env.source_label,
+            swh_m=999.0,  # Unknown historical weather: contributes no calm-sea points.
+            chl_mg_m3=0.0,
+            sst_anomaly_c=0.0,
+            env_source_label="Historical environmental conditions unavailable; excluded from score",
         )
 
         # -- Build geometry (risk zone polygon for high-risk vessels) --
         if risk_score >= 60:
-            geometry = _build_risk_zone_polygon(lon, lat, buffer_km=25.0)
+            geometry = {"type": "Point", "coordinates": [lon, lat]}
         else:
             geometry = {"type": "Point", "coordinates": [lon, lat]}
 
@@ -183,11 +196,11 @@ class SentinelService:
 
         return VesselCase(
             vessel_id=vessel_id,
-            name=raw.get("name", "Unknown Vessel"),
-            flag=raw.get("flag", "Unknown"),
+            name=raw.get("name", vessel.get("name") or vessel.get("ssvid") or "Unknown Vessel"),
+            flag=raw.get("flag", vessel.get("flag") or "Unknown"),
             event_time=event_time,
-            gap_start=raw.get("gap_start"),
-            gap_end=raw.get("gap_end"),
+            gap_start=raw.get("gap_start", raw.get("start") if event_type in ("GAP", "GAP_START") else None),
+            gap_end=raw.get("gap_end", raw.get("end") if event_type in ("GAP", "GAP_START") else None),
             gap_hours=gap_hours,
             geometry=geometry,
             protected_area_relation=relation,

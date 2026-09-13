@@ -38,7 +38,9 @@ class SupervisorService:
     """
 
     def __init__(self):
-        self._sentinel = SentinelService()
+        # This service executes the named, reproducible hero scenario. Live
+        # monitoring is exposed separately through the dashboard and Ocean Pulse.
+        self._sentinel = SentinelService(use_demo=True)
         self._navigator = NavigatorService()
         self._cleaner = CleanerService()
         self._state = SharedState()

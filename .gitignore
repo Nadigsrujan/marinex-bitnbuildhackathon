@@ -12,4 +12,7 @@ plan.md
 *.log
 implementation_plan.md
 dashboard/.next/
-dashboard/node_modules/
+dashboard/node_modules/
+data/cache/gfw/gfw_*.json
+data/cache/gfw/gfw_v2_*.json
+/dashboard/public/cesium/

@@ -280,6 +280,56 @@ export interface ProviderStatus {
   details?: Record<string, unknown>;
 }
 
+export interface LiveVessel {
+  mmsi: string;
+  name: string;
+  ship_type: number;
+  lat: number;
+  lon: number;
+  speed_kn: number;
+  heading_deg: number;
+  course_over_ground: number;
+  timestamp: string;
+  status: "LIVE" | "CACHED" | "HISTORICAL";
+  state: "observed" | "cached";
+  age_seconds: number;
+  estimated_position: {
+    lon: number;
+    lat: number;
+    horizon_seconds: number;
+    uncertainty_radius_m: number;
+    method: string;
+  };
+  track: Array<{
+    lat: number;
+    lon: number;
+    timestamp: string;
+    speed_kn: number;
+    heading_deg: number;
+  }>;
+  provenance: Record<string, unknown>;
+}
+
+export interface OceanPulse {
+  stream_id: string;
+  sequence: number;
+  heartbeat: number;
+  emitted_at: string;
+  server_unix_ms: number;
+  mode: "live" | "replay-ready";
+  vessel_count: number;
+  live_vessel_count: number;
+  vessels: LiveVessel[];
+  alerts: Array<{
+    id: string;
+    severity: string;
+    title: string;
+    detail: string;
+    mmsi?: string;
+  }>;
+  providers: ProviderStatus[];
+}
+
 export interface CurrentSample {
   lon: number;
   lat: number;
