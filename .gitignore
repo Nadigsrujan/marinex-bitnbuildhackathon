@@ -5,9 +5,11 @@ __pycache__/
 .pytest_tmp/
 .env
 .env.local
+.venv/
 venv/
 env/
 .DS_Store
+**/.DS_Store
 plan.md
 *.log
 implementation_plan.md
