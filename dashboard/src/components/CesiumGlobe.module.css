@@ -1,7 +1,7 @@
 .shell {
   position: relative;
   height: 100%;
-  min-height: 520px;
+  min-height: 540px;
   background: #030b17;
   overflow: hidden;
   border-radius: var(--radius-xl, 20px);
@@ -12,6 +12,7 @@
   inset: 0;
 }
 
+/* ── Top Floating Navigation Toolbar ── */
 .toolbar {
   position: absolute;
   top: 14px;
@@ -32,25 +33,25 @@
   font-family: var(--font-mono);
   font-weight: 600;
   margin-right: auto;
-  background: rgba(3, 11, 23, 0.7);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(3, 11, 23, 0.75);
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .toolbar button,
 .detail button {
   pointer-events: auto;
-  border: 1px solid rgba(233, 227, 216, 0.4);
+  border: 1px solid rgba(233, 227, 216, 0.5);
   border-radius: var(--radius-full);
-  background: rgba(250, 248, 245, 0.9);
+  background: rgba(250, 248, 245, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 5px 12px;
   color: var(--ink-900, #1E252B);
   font-family: var(--font-sans);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
@@ -60,12 +61,123 @@
 .detail button:hover {
   background: #ffffff;
   color: var(--ocean-700);
+  border-color: var(--ocean-600);
 }
 
+/* ── Interactive Drift Animation Control Dock ── */
+.driftDock {
+  position: absolute;
+  top: 56px;
+  left: 14px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(250, 248, 245, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(233, 227, 216, 0.9);
+  box-shadow: var(--shadow-card-hover);
+  color: var(--ink-900);
+  font-size: 11px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 28px);
+}
+
+.playBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--ocean-700);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 11px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.playBtn:hover {
+  background: var(--ocean-800);
+}
+
+.playBtnActive {
+  background: var(--ember-700);
+}
+
+.playBtnActive:hover {
+  background: var(--ember-600);
+}
+
+.focusBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: #ffffff;
+  color: var(--ink-800);
+  border: 1px solid var(--sand-300);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.focusBtn:hover {
+  background: var(--sand-100);
+  color: var(--ocean-700);
+  border-color: var(--ocean-600);
+}
+
+.scrubberWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scrubberInput {
+  width: 110px;
+  accent-color: var(--ocean-600);
+  cursor: pointer;
+}
+
+.speedGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--sand-100);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--sand-200);
+}
+
+.speedBtn {
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink-500);
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.speedBtnActive {
+  background: #ffffff;
+  color: var(--ink-900);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* ── Legend & Inspector ── */
 .legend,
 .detail {
   position: absolute;
-  background: rgba(250, 248, 245, 0.92);
+  background: rgba(250, 248, 245, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(233, 227, 216, 0.85);
