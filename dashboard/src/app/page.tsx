@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { DEMO_DASHBOARD_STATE } from "@/lib/demo-state";
 import { vesselLabel } from "@/lib/ocean-display";
 import type { DashboardState, OceanPulse, Provenance } from "@/lib/types";
+import { MARITIME_REGIONS, type MaritimeRegion } from "@/lib/regions";
 import { CAMERA_PRESETS } from "@/components/CesiumGlobe";
 import { fetchDashboardState, fetchRealtimeSnapshot, optimizeRouteWithWeights, realtimeStreamUrl } from "@/lib/api";
 import styles from "./page.module.css";
@@ -85,6 +86,21 @@ export default function Dashboard() {
   const [streamState, setStreamState] = useState<"connecting" | "streaming" | "degraded">("connecting");
   const [forecastHour, setForecastHour] = useState(0);
   const [utcTime, setUtcTime] = useState<string>("--:--:--");
+  const [selectedRegion, setSelectedRegion] = useState<MaritimeRegion>(MARITIME_REGIONS[0]);
+  const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!regionDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.${styles.regionSelectWrapper}`)) {
+        setRegionDropdownOpen(false);
+      }
+    };
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, [regionDropdownOpen]);
 
   // Dynamic Route Objective Weights
   const [weights, setWeights] = useState({
@@ -233,10 +249,67 @@ export default function Dashboard() {
               <span className={styles.brandSubtitle}>— Ocean Intelligence</span>
             </div>
             <div className={styles.dividerVertical} />
-            <div className={styles.regionInfo}>
-              <span className={styles.regionDot} />
-              <span style={{ fontWeight: 600 }}>Galapagos Sanctuary</span>
-              <span className={styles.regionCoords}>0.829° S, 90.982° W</span>
+            <div className={styles.regionSelectWrapper}>
+              <button
+                className={styles.regionButton}
+                onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
+                aria-haspopup="listbox"
+                aria-expanded={regionDropdownOpen}
+                aria-label="Select Maritime Region"
+              >
+                <span className={styles.regionDot} />
+                <span style={{ fontWeight: 600 }}>{selectedRegion.name}</span>
+                <span className={styles.regionCoords}>{selectedRegion.coordsText}</span>
+                <svg
+                  width="10"
+                  height="6"
+                  viewBox="0 0 10 6"
+                  fill="none"
+                  style={{
+                    marginLeft: 4,
+                    transition: "transform 0.2s ease",
+                    transform: regionDropdownOpen ? "rotate(180deg)" : "rotate(0)",
+                  }}
+                >
+                  <path
+                    d="M1 1L5 5L9 1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {regionDropdownOpen && (
+                <div className={styles.regionDropdown} role="listbox">
+                  <div className={styles.regionDropdownHeader}>GLOBAL MARITIME CORRIDORS</div>
+                  {MARITIME_REGIONS.map((reg) => (
+                    <button
+                      key={reg.id}
+                      role="option"
+                      aria-selected={selectedRegion.id === reg.id}
+                      className={`${styles.regionDropdownItem} ${
+                        selectedRegion.id === reg.id ? styles.regionDropdownItemActive : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedRegion(reg);
+                        setRegionDropdownOpen(false);
+                        setCameraPreset("OVERVIEW");
+                      }}
+                    >
+                      <div className={styles.regionItemTop}>
+                        <span className={styles.regionItemName}>{reg.name}</span>
+                        <span className={styles.regionItemCategory}>{reg.category}</span>
+                      </div>
+                      <div className={styles.regionItemBottom}>
+                        <span>{reg.coordsText}</span>
+                        <span>{reg.depthText}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -397,9 +470,9 @@ export default function Dashboard() {
           {/* Clean Control Bar */}
           <div className={styles.mapControlBar}>
             <div className={styles.mapTitleGroup}>
-              <h2 className={styles.mapTitle}>Galapagos Marine Sanctuary Matrix</h2>
+              <h2 className={styles.mapTitle}>{selectedRegion.name} Matrix</h2>
               <p className={styles.mapSubtitle}>
-                Bathymetric depth 2,840m · Real-time acoustic and radar surveillance
+                Bathymetric depth {selectedRegion.depthText} · {selectedRegion.subtitle}
               </p>
             </div>
 
@@ -452,6 +525,7 @@ export default function Dashboard() {
             <DeckMapComponent
               state={state}
               selectedCase={vessel?.vessel_id}
+              selectedRegion={selectedRegion}
               onSelectCase={(id) => {
                 setSelected(id);
                 setCameraPreset("THREAT");

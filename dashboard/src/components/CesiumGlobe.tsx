@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type * as Cesium from "cesium";
 import type { DashboardState, LiveVessel, Coordinate } from "@/lib/types";
+import type { MaritimeRegion } from "@/lib/regions";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import styles from "./CesiumGlobe.module.css";
 import { debrisPosition, vesselLabel } from "@/lib/ocean-display";
@@ -18,6 +19,7 @@ export const CAMERA_PRESETS = {
 type Props = {
   state: DashboardState;
   selectedCase?: string;
+  selectedRegion?: MaritimeRegion;
   onSelectCase?: (id: string) => void;
   replayStep?: number;
   activeCameraPreset?: keyof typeof CAMERA_PRESETS;
@@ -37,6 +39,7 @@ type Detail = {
 export default function CesiumGlobe({
   state,
   selectedCase,
+  selectedRegion,
   onSelectCase,
   activeCameraPreset = "OVERVIEW",
   liveVessels = [],
@@ -136,17 +139,40 @@ export default function CesiumGlobe({
     };
   }, []);
 
-  // Camera Presets
+  // Unified Camera & Region Preset Controller
   useEffect(() => {
     if (!ready || !runtime.current) return;
     const { C, viewer } = runtime.current;
-    const [lon, lat, height] = CAMERA_PRESETS[activeCameraPreset];
-    viewer.camera.lookAt(
-      C.Cartesian3.fromDegrees(lon, lat),
-      new C.HeadingPitchRange(C.Math.toRadians(-20), C.Math.toRadians(-45), height)
-    );
-    viewer.camera.lookAtTransform(C.Matrix4.IDENTITY);
-  }, [ready, activeCameraPreset]);
+    const getPresetCamera = (): [number, number, number] => {
+      if (!selectedRegion) return [...CAMERA_PRESETS[activeCameraPreset]];
+      const [cLon, cLat] = selectedRegion.center;
+      switch (activeCameraPreset) {
+        case "OVERVIEW":
+          return selectedRegion.camera;
+        case "THREAT":
+          return selectedRegion.threatCamera;
+        case "ROUTE":
+          return [cLon + 0.3, cLat + 0.1, selectedRegion.camera[2] * 1.1];
+        case "ENVIRONMENT":
+          return [cLon, cLat, selectedRegion.camera[2] * 1.8];
+        case "CLEANUP":
+          return [cLon - 0.15, cLat - 0.15, selectedRegion.camera[2] * 0.45];
+        default:
+          return selectedRegion.camera;
+      }
+    };
+
+    const [lon, lat, height] = getPresetCamera();
+    viewer.camera.flyTo({
+      destination: C.Cartesian3.fromDegrees(lon, lat, height),
+      orientation: {
+        heading: C.Math.toRadians(-20),
+        pitch: C.Math.toRadians(-45),
+        roll: 0.0,
+      },
+      duration: 1.6,
+    });
+  }, [ready, activeCameraPreset, selectedRegion]);
 
   // Selected Target Focus
   useEffect(() => {
@@ -225,11 +251,13 @@ export default function CesiumGlobe({
       });
     };
 
-    // Region Reference
-    point("place", [-90.5, -0.5], "Galapagos Marine Sanctuary", "#ffffff", {
-      title: "Galapagos Marine Reserve",
-      category: "PROTECTED SANCTUARY REGION",
-      explanation: "UNESCO World Heritage Marine Reserve covering 133,000 sq km of protected pelagic corridors.",
+    // Region Reference Marker
+    const regName = selectedRegion?.name ?? "Galapagos Marine Sanctuary";
+    const regCenter = selectedRegion?.center ?? [-90.5, -0.5];
+    point("place", regCenter, `${regName} · Operations Hub`, "#ffffff", {
+      title: regName,
+      category: `${selectedRegion?.category ?? "MARINE CORRIDOR"}`,
+      explanation: selectedRegion?.summary ?? "Active operational corridor under digital twin surveillance.",
     });
 
     // AIS Live & Cached Vessels
@@ -304,7 +332,6 @@ export default function CesiumGlobe({
 
       // Enhanced Debris Particles and Dynamic Advection
       for (const cluster of state.cleaner.clusters) {
-        // Render 64 particles per cluster with callback positions
         for (let member = 0; member < 64; member++) {
           const id = `particle-${cluster.cluster_id}-${member}`;
           details.current.set(id, {
@@ -354,7 +381,7 @@ export default function CesiumGlobe({
         details.current.set(id, {
           title: area.properties.name,
           category: "REFERENCE / MARINE RESERVE BOUNDARY",
-          explanation: "Official boundary of the Galapagos Marine Reserve exclusion zone.",
+          explanation: "Official boundary of the marine reserve exclusion zone.",
         });
         put({
           id,
@@ -381,20 +408,25 @@ export default function CesiumGlobe({
       if (!activeIds.has(entity.id)) viewer.entities.remove(entity);
     }
     viewer.scene.requestRender();
-  }, [ready, state, liveVessels, history, scenario, forecastHour, displayHour, selectedCase]);
+  }, [ready, state, liveVessels, history, scenario, forecastHour, displayHour, selectedCase, selectedRegion]);
 
   // Fly controls
-  const fly = (preset: "GLOBAL" | "GALAPAGOS" | "DEBRIS") => {
+  const fly = (preset: "GLOBAL" | "REGIONAL" | "DEBRIS") => {
     const r = runtime.current;
     if (!r) return;
     if (preset === "GLOBAL") {
-      r.viewer.camera.flyTo({ destination: r.C.Cartesian3.fromDegrees(-70, 15, 18000000), duration: 1.5 });
-    } else if (preset === "GALAPAGOS") {
-      r.viewer.camera.lookAt(
-        r.C.Cartesian3.fromDegrees(-90.5, -0.5),
-        new r.C.HeadingPitchRange(-0.35, -0.85, 650000)
-      );
-      r.viewer.camera.lookAtTransform(r.C.Matrix4.IDENTITY);
+      r.viewer.camera.flyTo({ destination: r.C.Cartesian3.fromDegrees(0, 20, 22000000), duration: 1.6 });
+    } else if (preset === "REGIONAL") {
+      const [lon, lat, height] = selectedRegion?.camera ?? [-90.5, -0.5, 650000];
+      r.viewer.camera.flyTo({
+        destination: r.C.Cartesian3.fromDegrees(lon, lat, height),
+        orientation: {
+          heading: r.C.Math.toRadians(-20),
+          pitch: r.C.Math.toRadians(-45),
+          roll: 0.0,
+        },
+        duration: 1.4,
+      });
     } else if (preset === "DEBRIS") {
       r.viewer.camera.flyTo({
         destination: r.C.Cartesian3.fromDegrees(-90.45, -0.65, 180000),
@@ -420,9 +452,9 @@ export default function CesiumGlobe({
 
       {/* ── Top Floating Navigation Toolbar ── */}
       <div className={styles.toolbar}>
-        <span>3D DIGITAL TWIN</span>
-        <button onClick={() => fly("GLOBAL")}>Global Fleet</button>
-        <button onClick={() => fly("GALAPAGOS")}>Galapagos Sanctuary</button>
+        <span>3D DIGITAL TWIN · {selectedRegion?.name?.toUpperCase() ?? "GALAPAGOS"}</span>
+        <button onClick={() => fly("GLOBAL")}>Global Fleet Orbit</button>
+        <button onClick={() => fly("REGIONAL")}>Focus Region</button>
         <button onClick={() => fly("DEBRIS")}>Focus Debris Swarm</button>
       </div>
 
@@ -478,7 +510,7 @@ export default function CesiumGlobe({
 
       {/* ── Map Legend ── */}
       <div className={styles.legend}>
-        <strong>Map Layers & Telemetry</strong>
+        <strong>{selectedRegion?.name ?? "Regional Matrix"} Telemetry</strong>
         <p>
           <i style={{ background: "#34d399" }} />
           AIS vessel reports · {liveVessels.length} contacts ({liveVessels.filter((v) => v.status === "LIVE").length} live)

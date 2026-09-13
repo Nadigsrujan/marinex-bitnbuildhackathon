@@ -50,12 +50,27 @@
   background: var(--sand-300);
 }
 
-.regionInfo {
+.regionSelectWrapper {
+  position: relative;
+}
+
+.regionButton {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--sand-100);
+  border: 1px solid var(--sand-300);
   font-size: 0.78rem;
-  color: var(--ink-700);
+  color: var(--ink-800);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.regionButton:hover {
+  background: var(--sand-200);
+  border-color: var(--sand-400);
 }
 
 .regionDot {
@@ -63,11 +78,93 @@
   height: 6px;
   border-radius: 50%;
   background: var(--moss-600);
+  box-shadow: 0 0 6px var(--moss-400);
 }
 
 .regionCoords {
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  color: var(--ink-500);
+}
+
+.regionDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 340px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--sand-300);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 0.4rem;
+  z-index: 100;
+}
+
+.regionDropdownHeader {
+  padding: 0.4rem 0.6rem 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+  border-bottom: 1px solid var(--sand-200);
+  margin-bottom: 0.3rem;
+}
+
+.regionDropdownItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.regionDropdownItem:hover {
+  background: var(--sand-100);
+}
+
+.regionDropdownItemActive {
+  background: var(--sand-200);
+}
+
+.regionItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.regionItemName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.regionItemCategory {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--sand-200);
+  color: var(--ocean-700);
+}
+
+.regionItemBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   color: var(--ink-500);
 }
 
