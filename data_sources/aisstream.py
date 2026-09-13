@@ -386,7 +386,27 @@ class AISStreamClient:
         self._worker_thread.start()
 
     def _run_loop(self) -> None:
-        asyncio.run(self._ingest_websocket())
+        while self._running:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            def _silent_handler(l, ctx):
+                exc = ctx.get("exception")
+                logger.debug("AISStream event: %s", exc or ctx.get("message"))
+            loop.set_exception_handler(_silent_handler)
+            try:
+                loop.run_until_complete(self._ingest_websocket())
+            except Exception as e:
+                logger.warning("AISStream worker exception: %s", e)
+            finally:
+                try:
+                    pending = asyncio.all_tasks(loop)
+                    for task in pending:
+                        task.cancel()
+                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    loop.close()
+                except Exception:
+                    pass
+                time.sleep(2)
 
     async def _ingest_websocket(self) -> None:
         import websockets  # type: ignore
@@ -409,10 +429,10 @@ class AISStreamClient:
                 self.registry.update("aisstream", status="CONNECTING")
                 async with websockets.connect(
                     url,
-                    ping_interval=20,
-                    ping_timeout=20,
-                    open_timeout=10,
-                    close_timeout=5,
+                    ping_interval=30,
+                    ping_timeout=60,
+                    open_timeout=15,
+                    close_timeout=10,
                 ) as ws:
                     await ws.send(json.dumps(sub_message))
                     self.registry.update(
@@ -494,14 +514,19 @@ class AISStreamClient:
                                     del self._vessels[oldest]
                                     self._tracks.pop(oldest, None)
                             self.registry.update("aisstream", status="LIVE", last_success_at=datetime.now(timezone.utc).isoformat(), last_observation_time=t_iso, error_summary=None)
-            except Exception as e:
+            except (Exception, asyncio.CancelledError) as e:
+                if not self._running:
+                    break
                 self.registry.update(
                     "aisstream",
                     status="STALE",
                     error_summary=str(e)[:100],
                     fallback_in_use=True,
                 )
-                await asyncio.sleep(backoff)
+                try:
+                    await asyncio.sleep(backoff)
+                except asyncio.CancelledError:
+                    break
                 backoff = min(backoff * 2, 60)
 
 
