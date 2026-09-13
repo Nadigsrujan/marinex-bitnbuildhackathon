@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { DEMO_DASHBOARD_STATE } from "@/lib/demo-state";
 import { vesselLabel } from "@/lib/ocean-display";
 import type { DashboardState, OceanPulse, Provenance } from "@/lib/types";
-import { MARITIME_REGIONS, type MaritimeRegion } from "@/lib/regions";
+import { getRegionalDashboardState, MARITIME_REGIONS, type MaritimeRegion } from "@/lib/regions";
 import { CAMERA_PRESETS } from "@/components/CesiumGlobe";
 import { fetchDashboardState, fetchRealtimeSnapshot, optimizeRouteWithWeights, realtimeStreamUrl } from "@/lib/api";
 import styles from "./page.module.css";
@@ -226,14 +226,22 @@ export default function Dashboard() {
     }
   }
 
-  const cases = [...state.sentinel.cases].sort((a, b) => b.risk_score - a.risk_score);
+  const effectiveState = useMemo(
+    () => getRegionalDashboardState(state, selectedRegion),
+    [state, selectedRegion]
+  );
+
+  const cases = useMemo(
+    () => [...effectiveState.sentinel.cases].sort((a, b) => b.risk_score - a.risk_score),
+    [effectiveState.sentinel.cases]
+  );
   const vessel = cases.find((c) => c.vessel_id === selected) ?? cases[0];
-  const route = state.navigator.route_result;
-  const plan = state.cleaner.cleanup_plan;
-  const usvs = state.cleaner.usvs ?? [];
+  const route = effectiveState.navigator.route_result;
+  const plan = effectiveState.cleaner.cleanup_plan;
+  const usvs = effectiveState.cleaner.usvs ?? [];
   const highRiskCases = cases.filter((c) => ["HIGH", "CRITICAL"].includes(c.risk_level));
 
-  const totalTraceDurationMs = state.supervisor?.last_decision?.trace?.reduce(
+  const totalTraceDurationMs = effectiveState.supervisor?.last_decision?.trace?.reduce(
     (acc, s) => acc + (s.duration_ms || 0),
     0
   ) ?? 288;
@@ -296,6 +304,10 @@ export default function Dashboard() {
                         setSelectedRegion(reg);
                         setRegionDropdownOpen(false);
                         setCameraPreset("OVERVIEW");
+                        const nextRegionalState = getRegionalDashboardState(state, reg);
+                        if (nextRegionalState.sentinel.cases[0]?.vessel_id) {
+                          setSelected(nextRegionalState.sentinel.cases[0].vessel_id);
+                        }
                       }}
                     >
                       <div className={styles.regionItemTop}>
@@ -437,7 +449,7 @@ export default function Dashboard() {
                 {usvs.length} USVs in fleet
               </span>
               <span className="font-mono text-ink-500">
-                {state.cleaner.clusters.length} clusters
+                {effectiveState.cleaner.clusters.length} clusters
               </span>
             </div>
           </div>
@@ -450,7 +462,7 @@ export default function Dashboard() {
             </div>
             <div className={styles.metricValueRow}>
               <span className={styles.metricValue}>
-                {value((state.supervisor?.last_decision?.confidence ?? 0.964) * 100, 1)}%
+                {value((effectiveState.supervisor?.last_decision?.confidence ?? 0.964) * 100, 1)}%
               </span>
               <span className={styles.metricUnit}>agreement</span>
             </div>
@@ -523,7 +535,7 @@ export default function Dashboard() {
           {/* Cesium Globe Canvas */}
           <div className={styles.mapCanvasContainer}>
             <DeckMapComponent
-              state={state}
+              state={effectiveState}
               selectedCase={vessel?.vessel_id}
               selectedRegion={selectedRegion}
               onSelectCase={(id) => {
@@ -1071,7 +1083,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {state.cleaner.clusters.map((cl) => (
+                {effectiveState.cleaner.clusters.map((cl) => (
                   <div
                     key={cl.cluster_id}
                     style={{
@@ -1109,7 +1121,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <AgentPipeline
-                trace={state.supervisor?.last_decision?.trace ?? []}
+                trace={effectiveState.supervisor?.last_decision?.trace ?? []}
                 replayStep={replayStep}
               />
             </div>

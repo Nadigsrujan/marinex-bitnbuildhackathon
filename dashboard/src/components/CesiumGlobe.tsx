@@ -428,8 +428,9 @@ export default function CesiumGlobe({
         duration: 1.4,
       });
     } else if (preset === "DEBRIS") {
+      const targetCluster = state.cleaner.clusters[0]?.centroid ?? selectedRegion?.center ?? [-90.45, -0.65];
       r.viewer.camera.flyTo({
-        destination: r.C.Cartesian3.fromDegrees(-90.45, -0.65, 180000),
+        destination: r.C.Cartesian3.fromDegrees(targetCluster[0], targetCluster[1], 180000),
         orientation: {
           heading: r.C.Math.toRadians(0),
           pitch: r.C.Math.toRadians(-45),
