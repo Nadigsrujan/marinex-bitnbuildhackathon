@@ -8,17 +8,17 @@ interface AgentPipelineProps {
 }
 
 const AGENT_COLORS: Record<string, string> = {
-  SUPERVISOR: "#818cf8",
-  SENTINEL: "#fb7185",
-  NAVIGATOR: "#38bdf8",
-  CLEANER: "#34d399",
+  SUPERVISOR: "var(--ocean-700, #0369a1)",
+  SENTINEL: "var(--ember-600, #c25e34)",
+  NAVIGATOR: "var(--ocean-600, #0284c7)",
+  CLEANER: "var(--moss-600, #2d6a4f)",
 };
 
-const AGENT_ICONS: Record<string, string> = {
-  SUPERVISOR: "⚡",
-  SENTINEL: "🛡️",
-  NAVIGATOR: "🧭",
-  CLEANER: "🌊",
+const AGENT_ACRONYMS: Record<string, string> = {
+  SUPERVISOR: "SPV",
+  SENTINEL: "SNT",
+  NAVIGATOR: "NAV",
+  CLEANER: "CLN",
 };
 
 export default function AgentPipeline({
@@ -38,19 +38,18 @@ export default function AgentPipeline({
       <div
         style={{
           position: "absolute",
-          left: 19,
-          top: 24,
-          bottom: 24,
+          left: 17,
+          top: 20,
+          bottom: 20,
           width: 2,
-          background:
-            "linear-gradient(to bottom, rgba(34, 211, 238, 0.3), rgba(129, 140, 248, 0.3))",
+          background: "var(--sand-200, #E9E3D8)",
         }}
       />
 
       {trace.map((step, i) => {
         const agent = step.agent ?? "SUPERVISOR";
-        const color = AGENT_COLORS[agent] ?? "#818cf8";
-        const icon = AGENT_ICONS[agent] ?? "⚙️";
+        const color = AGENT_COLORS[agent] ?? "var(--ocean-700, #0369a1)";
+        const acronym = AGENT_ACRONYMS[agent] ?? "AGT";
         const active = i <= replayStep || replayStep === -1;
         const current = i === replayStep;
 
@@ -59,40 +58,50 @@ export default function AgentPipeline({
             key={i}
             style={{
               display: "flex",
-              gap: 16,
-              padding: "12px 0",
-              opacity: active ? 1 : 0.25,
-              transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-              transform: active ? "translateX(0)" : "translateX(-8px)",
+              gap: 14,
+              padding: "10px 0",
+              opacity: active ? 1 : 0.3,
+              transition: "all 0.3s ease",
             }}
           >
-            {/* Step indicator */}
+            {/* Step indicator tag */}
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                background: active
-                  ? `${color}18`
-                  : "rgba(255,255,255,0.03)",
-                border: `2px solid ${active ? color : "rgba(255,255,255,0.1)"}`,
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: active ? "#ffffff" : "var(--sand-100, #F4F0E8)",
+                border: `1.5px solid ${active ? color : "var(--sand-200, #E9E3D8)"}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 16,
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 700,
+                color: active ? color : "var(--ink-400)",
                 flexShrink: 0,
                 zIndex: 1,
                 boxShadow: current
-                  ? `0 0 16px ${color}40`
-                  : "none",
-                transition: "all 0.5s ease",
+                  ? "0 2px 8px rgba(2, 132, 199, 0.2)"
+                  : "var(--shadow-sm)",
+                transition: "all 0.3s ease",
               }}
             >
-              {active ? icon : "○"}
+              {acronym}
             </div>
 
             {/* Step content */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: active ? "#ffffff" : "var(--sand-50, #FAF8F5)",
+                border: "1px solid var(--sand-200, #E9E3D8)",
+                borderRadius: 10,
+                padding: "10px 14px",
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
@@ -103,10 +112,10 @@ export default function AgentPipeline({
               >
                 <span
                   style={{
-                    fontFamily: "var(--font-display)",
+                    fontFamily: "var(--font-sans)",
                     fontWeight: 700,
-                    fontSize: 13,
-                    color: active ? color : "var(--text-muted)",
+                    fontSize: 12,
+                    color: active ? "var(--ink-900)" : "var(--ink-500)",
                   }}
                 >
                   {agent}
@@ -115,10 +124,11 @@ export default function AgentPipeline({
                   style={{
                     fontSize: 10,
                     fontFamily: "var(--font-mono)",
-                    color: "var(--text-muted)",
+                    color: "var(--ink-500)",
                     padding: "2px 6px",
-                    background: "rgba(255,255,255,0.04)",
+                    background: "var(--sand-100)",
                     borderRadius: 4,
+                    border: "1px solid var(--sand-200)",
                   }}
                 >
                   {step.tool ?? `Step ${step.step}`}
@@ -128,7 +138,7 @@ export default function AgentPipeline({
                     style={{
                       fontSize: 10,
                       fontFamily: "var(--font-mono)",
-                      color: "var(--text-muted)",
+                      color: "var(--ink-400)",
                       marginLeft: "auto",
                     }}
                   >
@@ -141,13 +151,14 @@ export default function AgentPipeline({
                 <div
                   style={{
                     fontSize: 11,
-                    color: "var(--text-secondary)",
-                    lineHeight: 1.6,
+                    color: "var(--ink-700)",
+                    lineHeight: 1.5,
+                    marginTop: 4,
                   }}
                 >
                   <span
                     style={{
-                      color: "var(--text-muted)",
+                      color: "var(--ink-400)",
                       fontFamily: "var(--font-mono)",
                       fontSize: 10,
                     }}
@@ -162,13 +173,14 @@ export default function AgentPipeline({
                 <div
                   style={{
                     fontSize: 11,
-                    color: "var(--text-secondary)",
-                    lineHeight: 1.6,
+                    color: "var(--ink-700)",
+                    lineHeight: 1.5,
+                    marginTop: 2,
                   }}
                 >
                   <span
                     style={{
-                      color: "var(--text-muted)",
+                      color: "var(--ink-400)",
                       fontFamily: "var(--font-mono)",
                       fontSize: 10,
                     }}
@@ -183,34 +195,23 @@ export default function AgentPipeline({
                 <div
                   style={{
                     fontSize: 11,
-                    color: "var(--accent-teal, #2dd4bf)",
-                    lineHeight: 1.6,
+                    color: "var(--moss-700)",
+                    lineHeight: 1.5,
+                    marginTop: 2,
+                    fontWeight: 500,
                   }}
                 >
                   <span
                     style={{
-                      color: "var(--text-muted)",
+                      color: "var(--ink-400)",
                       fontFamily: "var(--font-mono)",
                       fontSize: 10,
                     }}
                   >
-                    Δ:{" "}
+                    DELTA:{" "}
                   </span>
                   {step.state_changes}
                 </div>
-              )}
-
-              {/* Status bar */}
-              {active && (
-                <div
-                  style={{
-                    marginTop: 6,
-                    height: 3,
-                    borderRadius: 2,
-                    background: `linear-gradient(90deg, ${color}, ${color}20)`,
-                    opacity: 0.5,
-                  }}
-                />
               )}
             </div>
           </div>

@@ -10,17 +10,10 @@ interface RiskRingProps {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 75) return "#ef4444";
-  if (score >= 50) return "#f97316";
-  if (score >= 25) return "#fbbf24";
-  return "#34d399";
-}
-
-function scoreGlow(score: number): string {
-  if (score >= 75) return "rgba(239, 68, 68, 0.4)";
-  if (score >= 50) return "rgba(249, 115, 22, 0.3)";
-  if (score >= 25) return "rgba(251, 191, 36, 0.2)";
-  return "rgba(52, 211, 153, 0.2)";
+  if (score >= 75) return "var(--ember-700, #a44b24)";
+  if (score >= 50) return "var(--ember-600, #c25e34)";
+  if (score >= 25) return "var(--ocean-700, #0369a1)";
+  return "var(--moss-600, #2d6a4f)";
 }
 
 export default function RiskRing({
@@ -35,7 +28,6 @@ export default function RiskRing({
   const offset = circumference - (animatedScore / 100) * circumference;
   const center = size / 2;
   const color = scoreColor(score);
-  const glow = scoreGlow(score);
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimatedScore(score), 100);
@@ -48,13 +40,12 @@ export default function RiskRing({
         display: "inline-flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 4,
+        gap: 3,
       }}
     >
       <svg
         width={size}
         height={size}
-        style={{ filter: `drop-shadow(0 0 6px ${glow})` }}
       >
         {/* Background track */}
         <circle
@@ -62,7 +53,7 @@ export default function RiskRing({
           cy={center}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="var(--sand-200, #E9E3D8)"
           strokeWidth={strokeWidth}
         />
         {/* Animated arc */}
@@ -88,8 +79,8 @@ export default function RiskRing({
           textAnchor="middle"
           dominantBaseline="central"
           fill={color}
-          fontSize={size * 0.26}
-          fontFamily="'Outfit', sans-serif"
+          fontSize={size * 0.28}
+          fontFamily="var(--font-mono)"
           fontWeight="700"
         >
           {Math.round(animatedScore)}
@@ -99,10 +90,11 @@ export default function RiskRing({
         <span
           style={{
             fontSize: 9,
-            color: "var(--text-muted)",
+            color: "var(--ink-500)",
             textTransform: "uppercase",
             letterSpacing: "0.5px",
             fontFamily: "var(--font-mono)",
+            fontWeight: 600,
           }}
         >
           {label}

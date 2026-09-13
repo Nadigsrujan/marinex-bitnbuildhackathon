@@ -1,18 +1,163 @@
-.shell { position:relative; height:100%; min-height:560px; background:#030b17; overflow:hidden; border-radius:12px; }
-.canvas { position:absolute; inset:0; }
-.toolbar { position:absolute; top:14px; left:14px; right:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; pointer-events:none; }
-.toolbar span { color:#c4d5e7; letter-spacing:2px; font-size:10px; margin-right:auto; }
-.toolbar button,.detail button { pointer-events:auto; border:1px solid #40556b; border-radius:18px; background:#0b1a2de8; padding:7px 13px; color:#eef6ff; cursor:pointer; }
-.legend,.detail { position:absolute; background:#071321eF; border:1px solid #314356; border-radius:12px; padding:14px; color:#d9e7f5; font-size:12px; box-shadow:0 8px 35px #0005; }
-.legend { bottom:38px; left:14px; max-width:290px; }
-.legend strong { font-weight:500; font-size:13px; }
-.legend p { margin:10px 0; }
-.legend i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
-.legend label { display:block; margin:8px 0; cursor:pointer; }
-.legend input { accent-color:#55ebcb; margin-right:7px; }
-.legend small,.detail small { color:#9fafc2; line-height:1.6; }
-.detail { top:64px; right:14px; width:min(300px,calc(100% - 28px)); }
-.detail button { float:right; padding:0 8px; font-size:18px; }
-.detail h3 { margin:10px 0; font-size:17px; }
-.detail p { line-height:1.65; }
-.loading { position:absolute; inset:0; display:grid; place-items:center; background:#071321; color:white; }
+.shell {
+  position: relative;
+  height: 100%;
+  min-height: 520px;
+  background: #030b17;
+  overflow: hidden;
+  border-radius: var(--radius-xl, 20px);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.toolbar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.toolbar span {
+  color: #c4d5e7;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  margin-right: auto;
+  background: rgba(3, 11, 23, 0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toolbar button,
+.detail button {
+  pointer-events: auto;
+  border: 1px solid rgba(233, 227, 216, 0.4);
+  border-radius: var(--radius-full);
+  background: rgba(250, 248, 245, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 5px 12px;
+  color: var(--ink-900, #1E252B);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.toolbar button:hover,
+.detail button:hover {
+  background: #ffffff;
+  color: var(--ocean-700);
+}
+
+.legend,
+.detail {
+  position: absolute;
+  background: rgba(250, 248, 245, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(233, 227, 216, 0.85);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink-800, #2B333B);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-card);
+  z-index: 10;
+}
+
+.legend {
+  bottom: 16px;
+  left: 14px;
+  max-width: 280px;
+}
+
+.legend strong {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink-900);
+}
+
+.legend p {
+  margin: 6px 0;
+  color: var(--ink-700);
+}
+
+.legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.legend label {
+  display: flex;
+  align-items: center;
+  margin: 6px 0;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ink-700);
+}
+
+.legend input {
+  accent-color: var(--ocean-600);
+  margin-right: 6px;
+}
+
+.legend small,
+.detail small {
+  color: var(--ink-500);
+  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.detail {
+  top: 56px;
+  right: 14px;
+  width: min(300px, calc(100% - 28px));
+}
+
+.detail button {
+  float: right;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 9999px;
+}
+
+.detail h3 {
+  margin: 8px 0 4px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.detail p {
+  line-height: 1.5;
+  color: var(--ink-700);
+  margin: 6px 0;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #030b17;
+  color: var(--sand-100);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

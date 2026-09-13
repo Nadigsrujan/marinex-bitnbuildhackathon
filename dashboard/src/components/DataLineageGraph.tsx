@@ -8,7 +8,7 @@ interface Node {
   category: "source" | "engine" | "output";
   classification: "OBSERVED" | "NRT" | "FORECAST" | "REFERENCE" | "DERIVED" | "SIMULATED";
   desc: string;
-  badgeColor: string;
+  badgeStyle: { bg: string; color: string; border: string };
 }
 
 interface Edge {
@@ -19,25 +19,25 @@ interface Edge {
 
 const NODES: Node[] = [
   // Sources
-  { id: "src_hycom", name: "HYCOM NRT", category: "source", classification: "NRT", desc: "Surface u/v current velocity field", badgeColor: "#38bdf8" },
-  { id: "src_noaa_erddap", name: "NOAA CoastWatch", category: "source", classification: "OBSERVED", desc: "VIIRS chlorophyll & MUR SST satellite", badgeColor: "#34d399" },
-  { id: "src_noaa_wave", name: "NOAA GFS-Wave", category: "source", classification: "FORECAST", desc: "NOMADS wave height & swell direction", badgeColor: "#818cf8" },
-  { id: "src_ais", name: "AISstream.io", category: "source", classification: "OBSERVED", desc: "Live/cached vessel transponder telemetry", badgeColor: "#f472b6" },
-  { id: "src_gebco", name: "GEBCO 2024", category: "source", classification: "REFERENCE", desc: "15 arc-sec Galápagos bathymetry", badgeColor: "#94a3b8" },
-  { id: "src_eidc", name: "EIDC Litter 2023", category: "source", classification: "OBSERVED", desc: "Santa Cruz coastal survey transects", badgeColor: "#fbbf24" },
-  { id: "src_cdse", name: "CDSE SAR S1", category: "source", classification: "OBSERVED", desc: "Sentinel-1 radar scene acquisitions", badgeColor: "#c084fc" },
+  { id: "src_hycom", name: "HYCOM NRT", category: "source", classification: "NRT", desc: "Surface u/v current velocity field", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
+  { id: "src_noaa_erddap", name: "NOAA CoastWatch", category: "source", classification: "OBSERVED", desc: "VIIRS chlorophyll & MUR SST satellite", badgeStyle: { bg: "var(--moss-100)", color: "var(--moss-700)", border: "rgba(45,106,79,0.3)" } },
+  { id: "src_noaa_wave", name: "NOAA GFS-Wave", category: "source", classification: "FORECAST", desc: "NOMADS wave height & swell direction", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
+  { id: "src_ais", name: "AISstream.io", category: "source", classification: "OBSERVED", desc: "Live/cached vessel transponder telemetry", badgeStyle: { bg: "var(--ember-100)", color: "var(--ember-700)", border: "rgba(194,94,52,0.3)" } },
+  { id: "src_gebco", name: "GEBCO 2024", category: "source", classification: "REFERENCE", desc: "15 arc-sec Galápagos bathymetry", badgeStyle: { bg: "var(--sand-100)", color: "var(--ink-700)", border: "var(--sand-300)" } },
+  { id: "src_eidc", name: "EIDC Litter 2023", category: "source", classification: "OBSERVED", desc: "Santa Cruz coastal survey transects", badgeStyle: { bg: "var(--sand-100)", color: "var(--ink-700)", border: "var(--sand-300)" } },
+  { id: "src_cdse", name: "CDSE SAR S1", category: "source", classification: "OBSERVED", desc: "Sentinel-1 radar scene acquisitions", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
 
   // Engines
-  { id: "eng_sentinel", name: "SENTINEL", category: "engine", classification: "DERIVED", desc: "Dark vessel scoring & MPA proximity", badgeColor: "#fb7185" },
-  { id: "eng_navigator", name: "NAVIGATOR", category: "engine", classification: "DERIVED", desc: "Multi-objective current-aware routing", badgeColor: "#38bdf8" },
-  { id: "eng_cleaner", name: "CLEANER", category: "engine", classification: "DERIVED", desc: "Advection drift & USV fleet allocation", badgeColor: "#34d399" },
-  { id: "eng_supervisor", name: "SUPERVISOR", category: "engine", classification: "DERIVED", desc: "Bounded orchestration & trade-offs", badgeColor: "#fbbf24" },
+  { id: "eng_sentinel", name: "SENTINEL", category: "engine", classification: "DERIVED", desc: "Dark vessel scoring & MPA proximity", badgeStyle: { bg: "var(--ember-100)", color: "var(--ember-700)", border: "rgba(194,94,52,0.3)" } },
+  { id: "eng_navigator", name: "NAVIGATOR", category: "engine", classification: "DERIVED", desc: "Multi-objective current-aware routing", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
+  { id: "eng_cleaner", name: "CLEANER", category: "engine", classification: "DERIVED", desc: "Advection drift & USV fleet allocation", badgeStyle: { bg: "var(--moss-100)", color: "var(--moss-700)", border: "rgba(45,106,79,0.3)" } },
+  { id: "eng_supervisor", name: "SUPERVISOR", category: "engine", classification: "DERIVED", desc: "Bounded orchestration & trade-offs", badgeStyle: { bg: "var(--sand-100)", color: "var(--ink-900)", border: "var(--sand-300)" } },
 
   // Outputs
-  { id: "out_risk_zones", name: "3D Risk Volumes", category: "output", classification: "DERIVED", desc: "Extruded threat geometry for vessels", badgeColor: "#fb7185" },
-  { id: "out_route", name: "Optimized Route", category: "output", classification: "DERIVED", desc: "Luminous fuel/weather/security path", badgeColor: "#38bdf8" },
-  { id: "out_intercept", name: "USV Interception", category: "output", classification: "DERIVED", desc: "Predicted drift intercept coordinates", badgeColor: "#34d399" },
-  { id: "out_twin", name: "3D Digital Twin", category: "output", classification: "DERIVED", desc: "Unified operational maritime picture", badgeColor: "#818cf8" },
+  { id: "out_risk_zones", name: "3D Risk Volumes", category: "output", classification: "DERIVED", desc: "Extruded threat geometry for vessels", badgeStyle: { bg: "var(--ember-100)", color: "var(--ember-700)", border: "rgba(194,94,52,0.3)" } },
+  { id: "out_route", name: "Optimized Route", category: "output", classification: "DERIVED", desc: "Current & weather minimized corridor", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
+  { id: "out_intercept", name: "USV Interception", category: "output", classification: "DERIVED", desc: "Predicted drift intercept coordinates", badgeStyle: { bg: "var(--moss-100)", color: "var(--moss-700)", border: "rgba(45,106,79,0.3)" } },
+  { id: "out_twin", name: "3D Digital Twin", category: "output", classification: "DERIVED", desc: "Unified operational maritime picture", badgeStyle: { bg: "var(--ocean-100)", color: "var(--ocean-800)", border: "rgba(2,132,199,0.3)" } },
 ];
 
 const EDGES: Edge[] = [
@@ -61,52 +61,53 @@ const EDGES: Edge[] = [
 
 export default function DataLineageGraph() {
   return (
-    <div style={{ padding: "20px", color: "#e2e8f0", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ color: "var(--ink-900)", fontFamily: "var(--font-sans)" }}>
       <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#f8fafc", fontFamily: "'Outfit', sans-serif" }}>
-          🛰️ End-to-End Maritime Data Lineage & Provenance DAG
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--ink-900)" }}>
+          End-to-End Maritime Data Lineage & Provenance DAG
         </h2>
-        <p style={{ fontSize: 12, color: "#94a3b8", margin: "4px 0 0 0" }}>
+        <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "4px 0 0 0" }}>
           Every layer in MARINEX has strict verifiable lineage. Scientific observations, model forecasts, and autonomous derivations are never conflated.
         </p>
       </div>
 
       {/* Columns: Sources -> Engines -> Outputs */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         {/* Column 1: Sources */}
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>
-            01 / Upstream Data Providers
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ocean-700)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10, fontFamily: "var(--font-mono)" }}>
+            01 Upstream Providers
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {NODES.filter((n) => n.category === "source").map((node) => (
               <div
                 key={node.id}
                 style={{
-                  background: "rgba(15, 23, 42, 0.8)",
-                  border: `1px solid ${node.badgeColor}40`,
-                  borderRadius: 8,
+                  background: "#ffffff",
+                  border: "1px solid var(--sand-200)",
+                  borderRadius: 10,
                   padding: "10px 12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong style={{ fontSize: 13, color: "#f8fafc" }}>{node.name}</strong>
+                  <strong style={{ fontSize: 12, color: "var(--ink-900)" }}>{node.name}</strong>
                   <span
                     style={{
                       fontSize: 9,
                       fontWeight: 700,
+                      fontFamily: "var(--font-mono)",
                       padding: "2px 6px",
-                      borderRadius: 4,
-                      background: `${node.badgeColor}20`,
-                      color: node.badgeColor,
-                      border: `1px solid ${node.badgeColor}60`,
+                      borderRadius: 9999,
+                      background: node.badgeStyle.bg,
+                      color: node.badgeStyle.color,
+                      border: `1px solid ${node.badgeStyle.border}`,
                     }}
                   >
                     {node.classification}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{node.desc}</div>
+                <div style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4 }}>{node.desc}</div>
               </div>
             ))}
           </div>
@@ -114,38 +115,39 @@ export default function DataLineageGraph() {
 
         {/* Column 2: Engines */}
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>
-            02 / Domain Engines & AI
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ember-700)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10, fontFamily: "var(--font-mono)" }}>
+            02 Domain Engines & AI
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {NODES.filter((n) => n.category === "engine").map((node) => (
               <div
                 key={node.id}
                 style={{
-                  background: "rgba(15, 23, 42, 0.8)",
-                  border: `1px solid ${node.badgeColor}50`,
-                  borderRadius: 8,
+                  background: "#ffffff",
+                  border: "1px solid var(--sand-200)",
+                  borderRadius: 10,
                   padding: "10px 12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong style={{ fontSize: 13, color: "#f8fafc" }}>{node.name}</strong>
+                  <strong style={{ fontSize: 12, color: "var(--ink-900)" }}>{node.name}</strong>
                   <span
                     style={{
                       fontSize: 9,
                       fontWeight: 700,
+                      fontFamily: "var(--font-mono)",
                       padding: "2px 6px",
-                      borderRadius: 4,
-                      background: `${node.badgeColor}20`,
-                      color: node.badgeColor,
-                      border: `1px solid ${node.badgeColor}60`,
+                      borderRadius: 9999,
+                      background: node.badgeStyle.bg,
+                      color: node.badgeStyle.color,
+                      border: `1px solid ${node.badgeStyle.border}`,
                     }}
                   >
                     {node.classification}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{node.desc}</div>
+                <div style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4 }}>{node.desc}</div>
               </div>
             ))}
           </div>
@@ -153,38 +155,39 @@ export default function DataLineageGraph() {
 
         {/* Column 3: Outputs */}
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>
-            03 / Digital Twin & Actions
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--moss-700)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10, fontFamily: "var(--font-mono)" }}>
+            03 Digital Twin & Response
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {NODES.filter((n) => n.category === "output").map((node) => (
               <div
                 key={node.id}
                 style={{
-                  background: "rgba(15, 23, 42, 0.8)",
-                  border: `1px solid ${node.badgeColor}50`,
-                  borderRadius: 8,
+                  background: "#ffffff",
+                  border: "1px solid var(--sand-200)",
+                  borderRadius: 10,
                   padding: "10px 12px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong style={{ fontSize: 13, color: "#f8fafc" }}>{node.name}</strong>
+                  <strong style={{ fontSize: 12, color: "var(--ink-900)" }}>{node.name}</strong>
                   <span
                     style={{
                       fontSize: 9,
                       fontWeight: 700,
+                      fontFamily: "var(--font-mono)",
                       padding: "2px 6px",
-                      borderRadius: 4,
-                      background: `${node.badgeColor}20`,
-                      color: node.badgeColor,
-                      border: `1px solid ${node.badgeColor}60`,
+                      borderRadius: 9999,
+                      background: node.badgeStyle.bg,
+                      color: node.badgeStyle.color,
+                      border: `1px solid ${node.badgeStyle.border}`,
                     }}
                   >
                     {node.classification}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{node.desc}</div>
+                <div style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4 }}>{node.desc}</div>
               </div>
             ))}
           </div>
@@ -192,17 +195,17 @@ export default function DataLineageGraph() {
       </div>
 
       {/* Lineage Trace Table */}
-      <div style={{ marginTop: 20, background: "rgba(15, 23, 42, 0.6)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", padding: 14 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#cbd5e1" }}>
+      <div style={{ marginTop: 20, background: "var(--sand-50)", borderRadius: 12, border: "1px solid var(--sand-200)", padding: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-800)" }}>
           Active Transformations & Cross-Domain Linkages
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
           {EDGES.map((edge, idx) => (
-            <div key={idx} style={{ fontSize: 11, background: "rgba(255,255,255,0.03)", padding: "6px 10px", borderRadius: 4, borderLeft: "2px solid #38bdf8" }}>
-              <span style={{ color: "#94a3b8" }}>{edge.from.replace("src_", "").replace("eng_", "").toUpperCase()}</span>
-              {" → "}
-              <span style={{ color: "#f8fafc", fontWeight: 600 }}>{edge.to.replace("eng_", "").replace("out_", "").toUpperCase()}</span>
-              <div style={{ color: "#64748b", fontSize: 10, marginTop: 2 }}>{edge.label}</div>
+            <div key={idx} style={{ fontSize: 11, background: "#ffffff", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--sand-200)", borderLeft: "3px solid var(--ocean-600)" }}>
+              <span style={{ color: "var(--ink-500)", fontFamily: "var(--font-mono)", fontSize: 10 }}>{edge.from.replace("src_", "").replace("eng_", "").toUpperCase()}</span>
+              <span style={{ color: "var(--ocean-700)" }}> → </span>
+              <span style={{ color: "var(--ink-900)", fontWeight: 600, fontFamily: "var(--font-mono)", fontSize: 10 }}>{edge.to.replace("eng_", "").replace("out_", "").toUpperCase()}</span>
+              <div style={{ color: "var(--ink-500)", fontSize: 10, marginTop: 2 }}>{edge.label}</div>
             </div>
           ))}
         </div>
